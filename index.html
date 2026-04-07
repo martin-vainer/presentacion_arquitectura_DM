@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Arquitectura de Datos — Control de Riesgos</title>
+  <title>DATAMART de Riesgos — Arquitectura y Gobierno de Datos</title>
   <style>
     /* =====================================================
        VARIABLES & RESET
@@ -202,10 +202,11 @@
       opacity: 0;
     }
     #s1 .bar       { opacity: 0; margin-bottom: 28px; }
-    #s1 h1         { opacity: 0; font-size: 48px; font-weight: 800; color: var(--blue-dark); line-height: 1.18; max-width: 680px; margin-bottom: 20px; }
+    #s1 h1         { opacity: 0; font-size: 48px; font-weight: 800; color: var(--blue-dark); line-height: 1.18; max-width: 760px; margin-bottom: 20px; }
     #s1 .cover-sub { opacity: 0; font-size: 19px; color: var(--text-muted); max-width: 580px; line-height: 1.65; margin-bottom: 44px; }
     #s1 .meta      { opacity: 0; display: flex; gap: 28px; font-size: 13px; color: var(--text-muted); }
     #s1 .meta span { display: flex; align-items: center; gap: 6px; }
+    #s1 .dm-word   { color: var(--blue-light); }
 
     #s1.is-active .eyebrow  { animation: fadeUp 0.5s ease 0.1s  forwards; }
     #s1.is-active .bar      { animation: fadeUp 0.5s ease 0.2s  forwards; }
@@ -434,7 +435,8 @@
 
     #s5 .panel {
       display: none;
-      background: var(--white);
+      background: var(--panel-bg, var(--white));
+      border: 1.5px solid var(--panel-border, transparent);
       border-radius: 12px;
       box-shadow: var(--shadow);
       padding: 24px 28px;
@@ -485,8 +487,10 @@
       display: flex; align-items: flex-start; gap: 9px;
       font-size: 12.5px; color: var(--text); line-height: 1.5;
       padding: 8px 0; border-bottom: 1px solid #F5F5F5;
+      transition: background 0.2s ease;
     }
     #s6 .vc-row:last-child { border-bottom: none; }
+    #s6 .vc-row.is-paired { background: #F6FAFF; }
 
     #s6 .vbadge {
       width: 18px; height: 18px;
@@ -570,55 +574,75 @@
     /* =====================================================
        SLIDE 8 — ROADMAP
     ===================================================== */
-    #s8 .timeline {
+    #s8 .iter-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      position: relative;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
       margin-top: 24px;
       margin-bottom: 20px;
     }
 
-    #s8 .timeline::before {
-      content: '';
-      position: absolute;
-      top: 30px;
-      left: calc(12.5% + 4px);
-      right: calc(12.5% + 4px);
-      height: 3px;
-      background: linear-gradient(90deg, var(--blue-light), var(--green));
-      z-index: 0;
+    #s8 .iter {
+      background: var(--white);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      border-top: 4px solid var(--blue-light);
+      padding: 16px 16px 14px;
+      min-height: 290px;
     }
+    #s8 .iter.i1 { border-top-color: var(--blue-light); }
+    #s8 .iter.i2 { border-top-color: var(--green); }
+    #s8 .iter.i3 { border-top-color: var(--purple); }
 
-    #s8 .phase {
-      display: flex; flex-direction: column; align-items: center;
-      text-align: center; padding: 0 10px;
-      position: relative; z-index: 1;
+    #s8 .iter-top {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 8px;
     }
-
-    #s8 .ph-circle {
-      width: 60px; height: 60px;
+    #s8 .iter-dot {
+      width: 26px; height: 26px;
       border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 20px; margin-bottom: 12px;
-      box-shadow: 0 0 0 5px var(--bg);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
     }
-    .pc1 { background: #EBF8FF; border: 2.5px solid var(--blue-light); }
-    .pc2 { background: #E8F8F4; border: 2.5px solid var(--green); }
-    .pc3 { background: #EEF2FF; border: 2.5px solid #5C6BC0; }
-    .pc4 { background: #F3E5FF; border: 2.5px solid var(--purple); }
+    #s8 .i1 .iter-dot { background: var(--blue-light); }
+    #s8 .i2 .iter-dot { background: var(--green); }
+    #s8 .i3 .iter-dot { background: var(--purple); }
 
-    #s8 .ph-num  { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 4px; }
-    #s8 .ph-name { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
-    #s8 .ph-dur  { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+    #s8 .iter-num {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+    }
+    #s8 .iter-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    #s8 .iter-focus {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
 
-    #s8 .ph-tasks { list-style: none; text-align: left; width: 100%; }
-    #s8 .ph-tasks li {
+    #s8 .iter-tasks { list-style: none; }
+    #s8 .iter-tasks li {
       font-size: 12px; color: var(--text-muted); line-height: 1.45;
       padding: 4px 0; border-bottom: 1px solid #F0F0F0;
       display: flex; align-items: flex-start; gap: 5px;
     }
-    #s8 .ph-tasks li:last-child { border-bottom: none; }
-    #s8 .ph-tasks li::before { content: '›'; color: var(--blue-light); flex-shrink: 0; font-size: 13px; line-height: 1.3; }
+    #s8 .iter-tasks li:last-child { border-bottom: none; }
+    #s8 .iter-tasks li::before { content: '›'; color: var(--blue-light); flex-shrink: 0; font-size: 13px; line-height: 1.3; }
 
     #s8 .rd-note {
       background: var(--white);
@@ -647,9 +671,45 @@
     }
 
     #s9 .cl-tag  { font-size: 10px; font-weight: 700; letter-spacing: 3.5px; text-transform: uppercase; color: var(--blue-light); margin-bottom: 20px; opacity: 0; }
-    #s9 h2       { font-size: 38px; font-weight: 800; color: #fff; max-width: 740px; line-height: 1.25; margin-bottom: 22px; opacity: 0; }
-    #s9 .cl-body { font-size: 16px; color: rgba(255,255,255,0.55); max-width: 580px; line-height: 1.7; margin-bottom: 40px; opacity: 0; }
-    #s9 .cl-cta  { padding: 13px 34px; border: 2px solid rgba(255,255,255,0.3); border-radius: 40px; color: #fff; font-size: 14px; font-weight: 500; opacity: 0; }
+    #s9 h2       { font-size: 38px; font-weight: 800; color: #fff; max-width: 740px; line-height: 1.25; margin-bottom: 18px; opacity: 0; }
+    #s9 .cl-body { font-size: 16px; color: rgba(255,255,255,0.62); max-width: 620px; line-height: 1.7; margin-bottom: 10px; opacity: 0; }
+    #s9 .close-intro {
+      opacity: 0;
+      font-size: 17px;
+      color: rgba(255,255,255,0.9);
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    #s9 .close-points {
+      opacity: 0;
+      list-style: none;
+      margin-bottom: 0;
+      text-align: left;
+      width: 100%;
+      max-width: 640px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 12px;
+      padding: 16px 18px 12px;
+    }
+    #s9 .close-points li {
+      position: relative;
+      padding-left: 22px;
+      color: rgba(255,255,255,0.88);
+      font-size: 15px;
+      line-height: 1.6;
+      margin-bottom: 10px;
+    }
+    #s9 .close-points li::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      top: 0;
+      color: var(--blue-light);
+      font-size: 20px;
+      line-height: 1.1;
+    }
+    #s9 .close-points li strong { color: #fff; }
     #s9 .deco    { position: absolute; border-radius: 50%; pointer-events: none; }
     #s9 .deco-1  { width: 320px; height: 320px; background: rgba(0,174,239,0.06); top: -60px; right: -60px; }
     #s9 .deco-2  { width: 220px; height: 220px; background: rgba(0,176,141,0.05); bottom: -40px; left: -40px; }
@@ -657,7 +717,8 @@
     #s9.is-active .cl-tag  { animation: fadeUp 0.5s ease 0.1s  forwards; }
     #s9.is-active h2       { animation: fadeUp 0.55s ease 0.25s forwards; }
     #s9.is-active .cl-body { animation: fadeUp 0.55s ease 0.4s  forwards; }
-    #s9.is-active .cl-cta  { animation: fadeUp 0.55s ease 0.55s forwards; }
+    #s9.is-active .close-intro { animation: fadeUp 0.55s ease 0.48s forwards; }
+    #s9.is-active .close-points { animation: fadeUp 0.55s ease 0.58s forwards; }
 
     @media (max-width: 1366px), (max-height: 820px) {
       .slide { padding: 46px 56px 72px; }
@@ -665,7 +726,7 @@
       #s1 { padding-left: 76px; }
       #s1 h1 { font-size: 40px; }
       #s5 .tabs-layout { height: 360px; grid-template-columns: 185px 1fr; }
-      #s8 .timeline { margin-top: 16px; }
+      #s8 .iter-grid { margin-top: 16px; }
     }
 
     @media (max-width: 1180px) {
@@ -676,13 +737,17 @@
         grid-template-columns: repeat(2, 1fr);
       }
 
-      #s8 .timeline {
+      #s8 .iter-grid {
         grid-template-columns: repeat(2, 1fr);
-        gap: 20px 14px;
       }
-      #s8 .timeline::before { display: none; }
       #s6 .vs-grid { grid-template-columns: 1fr; gap: 12px; }
       #s6 .vs-mid { order: -1; }
+    }
+
+    @media (max-width: 860px) {
+      #s8 .iter-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -703,12 +768,12 @@
 <section class="slide is-active" id="s1" data-dark="false">
   <div class="eyebrow">Gerencia de Control de Riesgos</div>
   <div class="accent-bar bar"></div>
-  <h1>Arquitectura de Datos<br>para Control de Riesgos</h1>
-  <p class="cover-sub">Propuesta de reorganización para una gestión de datos más robusta, gobernable y escalable</p>
+  <h1><span class="dm-word">DATAMART</span> de Riesgos<br>Arquitectura y Gobierno de Datos</h1>
+  <p class="cover-sub">Propuesta ejecutiva para consolidar el <strong>DATAMART de Riesgos</strong> con mejor performance, trazabilidad end-to-end y consumo más simple para negocio.</p>
   <div class="meta">
     <span>📅 Abril 2026</span>
     <span>🏦 Gerencia de Control de Riesgos</span>
-    <span>📊 Ingeniería de Datos</span>
+    <span>📊 DATAMART de Riesgos</span>
   </div>
 </section>
 
@@ -718,8 +783,8 @@
 <section class="slide" id="s2" data-dark="false">
   <div class="slide-inner">
     <div class="slide-header stagger">
-      <div class="slide-title">El escenario actual</div>
-      <div class="slide-sub">Cómo fluyen hoy los datos en la gerencia — sin coordinación, sin estándares compartidos</div>
+      <div class="slide-title">Estado actual del flujo de datos</div>
+      <div class="slide-sub">Hoy no hay un DATAMART unificado: el proceso pierde consistencia, trazabilidad y velocidad de punta a punta</div>
     </div>
 
     <!-- Current-state diagram (SVG) -->
@@ -754,9 +819,9 @@
         <rect x="190" y="22" width="160" height="26" rx="5" fill="#FFF5F0" stroke="#F37053" stroke-width="1.5"/>
         <text x="270" y="39" text-anchor="middle" font-size="11" font-weight="600" fill="#C0392B">ETL Riesgo Crédito</text>
         <rect x="190" y="56" width="160" height="26" rx="5" fill="#FFF5F0" stroke="#F37053" stroke-width="1.5"/>
-        <text x="270" y="73" text-anchor="middle" font-size="11" font-weight="600" fill="#C0392B">ETL Riesgo Regulatorio</text>
+        <text x="270" y="73" text-anchor="middle" font-size="11" font-weight="600" fill="#C0392B">ETL seguimiento Individuos</text>
         <rect x="190" y="90" width="160" height="26" rx="5" fill="#FFF5F0" stroke="#F37053" stroke-width="1.5"/>
-        <text x="270" y="107" text-anchor="middle" font-size="11" font-weight="600" fill="#C0392B">ETL Riesgo Operacional</text>
+        <text x="270" y="107" text-anchor="middle" font-size="11" font-weight="600" fill="#C0392B">ETL Hipotecarios</text>
         <rect x="190" y="124" width="160" height="26" rx="5" fill="#FFF5F0" stroke="#F37053" stroke-width="1.5"/>
         <text x="270" y="141" text-anchor="middle" font-size="11" font-weight="600" fill="#C0392B">ETL Indicadores</text>
 
@@ -764,9 +829,9 @@
         <rect x="410" y="22" width="168" height="26" rx="5" fill="#FFF0F0" stroke="#EF413D" stroke-width="1.5"/>
         <text x="494" y="39" text-anchor="middle" font-size="11" font-weight="600" fill="#C0392B">BD Crédito (propia)</text>
         <rect x="410" y="56" width="168" height="26" rx="5" fill="#FFF0F0" stroke="#EF413D" stroke-width="1.5"/>
-        <text x="494" y="73" text-anchor="middle" font-size="11" font-weight="600" fill="#C0392B">BD Regulatorio (propia)</text>
+        <text x="494" y="73" text-anchor="middle" font-size="11" font-weight="600" fill="#C0392B">BD individuos (propia)</text>
         <rect x="410" y="90" width="168" height="26" rx="5" fill="#FFF0F0" stroke="#EF413D" stroke-width="1.5"/>
-        <text x="494" y="107" text-anchor="middle" font-size="11" font-weight="600" fill="#C0392B">BD Operacional (propia)</text>
+        <text x="494" y="107" text-anchor="middle" font-size="11" font-weight="600" fill="#C0392B">BD Hipotecarios (propia)</text>
         <rect x="410" y="124" width="168" height="26" rx="5" fill="#FFF0F0" stroke="#EF413D" stroke-width="1.5"/>
         <text x="494" y="141" text-anchor="middle" font-size="11" font-weight="600" fill="#C0392B">BD KPIs (propia)</text>
 
@@ -801,7 +866,7 @@
         <line x1="580" y1="137" x2="638" y2="61" stroke="#F37053" stroke-width="1" stroke-dasharray="4 3" opacity="0.4"/>
 
         <!-- Warning label -->
-        <text x="448" y="162" text-anchor="middle" font-size="10" font-weight="600" fill="#F37053">⚠ Cada proceso define su propia lógica — sin coordinación, sin fuente única de verdad</text>
+        <text x="448" y="175" text-anchor="middle" font-size="10" font-weight="600" fill="#F37053">⚠ Cada proceso resuelve por separado: no existe DATAMART común ni control end-to-end</text>
       </svg>
     </div>
 
@@ -809,27 +874,27 @@
     <div class="problems stagger">
       <div class="prob">
         <div class="prob-dot">!</div>
-        <div><strong>Múltiples fuentes de verdad</strong><p>Cada ETL define su lógica. Un mismo indicador puede diferir entre reportes.</p></div>
+        <div><strong>Métricas inconsistentes</strong><p>Un mismo indicador puede cambiar según el proceso o el reporte consultado.</p></div>
       </div>
       <div class="prob">
         <div class="prob-dot">!</div>
-        <div><strong>Poca gobernanza</strong><p>Sin modelo centralizado ni estándares compartidos entre procesos.</p></div>
+        <div><strong>Gobernanza débil</strong><p>No hay reglas únicas, documentación transversal ni metadatos mantenidos en forma central.</p></div>
       </div>
       <div class="prob">
         <div class="prob-dot">!</div>
-        <div><strong>Baja agilidad</strong><p>Cada nuevo requerimiento exige construir un ETL nuevo desde cero.</p></div>
+        <div><strong>Baja velocidad de entrega</strong><p>Cada pedido nuevo obliga a rediseñar lógica y procesos, sin reutilización real.</p></div>
       </div>
       <div class="prob">
         <div class="prob-dot">!</div>
-        <div><strong>Pobre performance</strong><p>Consultas directas sobre bases desnormalizadas sin optimización analítica.</p></div>
+        <div><strong>Performance inestable</strong><p>Power BI y SAS consumen estructuras no preparadas para análisis sostenido.</p></div>
       </div>
       <div class="prob">
         <div class="prob-dot">!</div>
-        <div><strong>Difícil mantenimiento</strong><p>Procesos dispersos, sin documentación ni trazabilidad del dato.</p></div>
+        <div><strong>Mantenimiento costoso</strong><p>Procesos dispersos y dependientes de conocimiento tácito de pocas personas.</p></div>
       </div>
       <div class="prob">
         <div class="prob-dot">!</div>
-        <div><strong>Escasa escalabilidad</strong><p>El esquema no soporta el crecimiento ordenado de nuevos dominios.</p></div>
+        <div><strong>Sin control end-to-end</strong><p>Es difícil seguir el recorrido completo del dato y justificar cambios ante auditoría.</p></div>
       </div>
     </div>
   </div>
@@ -842,7 +907,7 @@
   <div class="slide-inner">
     <div class="slide-header">
       <div class="slide-title">¿Qué pasa si no actuamos?</div>
-      <div class="slide-sub">El costo de mantener el esquema actual no es técnico — es de confiabilidad del dato</div>
+      <div class="slide-sub">El riesgo no es de tecnología: es de negocio, por decisiones tomadas sobre datos sin garantía end-to-end</div>
     </div>
 
     <div class="grid stagger">
@@ -852,23 +917,22 @@
           <li>Reportes con cifras inconsistentes expuestos ante reguladores o la alta dirección</li>
           <li>Decisiones basadas en datos que no coinciden entre fuentes distintas</li>
           <li>Incapacidad de responder ágilmente ante auditorías o requerimientos regulatorios</li>
-          <li>Pérdida de confianza en los datos por parte de las áreas de negocio</li>
+          <li>Pérdida de confianza en los datos a la hora de tomar decisiones estratégicas</li>
         </ul>
       </div>
 
       <div class="risk-card warning">
         <h3>🟠 Riesgos a mediano plazo</h3>
         <ul class="risk-list">
-          <li>Cada nuevo dominio de riesgo suma más deuda técnica sin resolver la anterior</li>
-          <li>Costo de mantenimiento creciente con alta dependencia de personas clave</li>
-          <li>Dificultad para incorporar nuevas herramientas o satisfacer exigencias regulatorias</li>
-          <li>Silos de información que impiden una visión consolidada del riesgo</li>
+          <li>Cada nuevo caso de uso agrega deuda y complejidad sobre la base existente</li>
+          <li>Crece la dependencia de personas clave y cae la mantenibilidad del DATAMART</li>
+          <li>Se dificulta escalar cobertura de datos y reportes productivos en tiempos de negocio</li>
         </ul>
       </div>
 
       <div class="impact">
         <div class="icon">⚡</div>
-        <p>El problema no es técnico: es de <strong>confiabilidad y gobernanza del dato</strong>. Sin una arquitectura ordenada, la gerencia de control de riesgos opera sobre una base que <strong>no garantiza consistencia</strong>. Y eso, en sí mismo, es un riesgo.</p>
+        <p>Sin DATAMART gobernado, la gerencia opera con una cadena de datos difícil de auditar. La salida es <strong>estandarizar el flujo end-to-end</strong>, con documentación y metadatos como práctica obligatoria, para sostener <strong>confiabilidad operativa</strong>.</p>
       </div>
     </div>
   </div>
@@ -880,8 +944,8 @@
 <section class="slide" id="s4" data-dark="false">
   <div class="slide-inner">
     <div class="slide-header">
-      <div class="slide-title">La arquitectura propuesta</div>
-      <div class="slide-sub">Un flujo por capas con responsabilidades claras, separadas y documentadas</div>
+      <div class="slide-title">Arquitectura objetivo del DATAMART</div>
+      <div class="slide-sub">Un flujo por capas para operar con <strong>SSOT (Single Source of Truth)</strong>, trazabilidad y reglas de negocio consistentes</div>
     </div>
 
     <div class="arch-card">
@@ -901,7 +965,7 @@
         <div class="layer-box lb-rel">
           <span class="licon">🔗</span>
           <span class="lname">Modelo Relacional</span>
-          <span class="ldesc">Integración y consolidación. Única fuente de verdad</span>
+          <span class="ldesc">Integración y consolidación. SSOT del DATAMART de Riesgos</span>
         </div>
         <div class="l-arrow">▶</div>
         <div class="layer-box lb-dim">
@@ -927,15 +991,15 @@
     <div class="pillars stagger">
       <div class="pillar">
         <strong>Separación de responsabilidades</strong>
-        Cada capa tiene un rol específico. Cambiar una no impacta a las demás: las fuentes pueden evolucionar sin romper los reportes.
+        Cada capa tiene un rol específico. Las fuentes pueden cambiar sin romper consumo ni reportes productivos.
       </div>
       <div class="pillar green">
-        <strong>Única fuente de verdad</strong>
-        La lógica de negocio se define una sola vez en el modelo relacional y se reutiliza hacia arriba. Todos los reportes hablan de los mismos números.
+        <strong>SSOT para todo el negocio</strong>
+        La lógica se define una sola vez en el modelo relacional consolidado y se reutiliza en todo el DATAMART. Un dato, una definición.
       </div>
       <div class="pillar purple">
-        <strong>Escalabilidad ordenada</strong>
-        Nuevos dominios de riesgo se incorporan siguiendo el mismo esquema. Sin silos, sin duplicación, sin deuda técnica nueva.
+        <strong>Documentación y metadatos vivos</strong>
+        Cada iteración documenta reglas, linaje y definiciones. Eso mejora entendimiento futuro y reduce costo de mantenimiento.
       </div>
     </div>
   </div>
@@ -951,17 +1015,18 @@
       <div class="slide-sub">Rol, propósito y problema que resuelve cada componente de la arquitectura</div>
     </div>
 
-    <div class="exec-note"><strong>Mensaje ejecutivo clave:</strong> el modelo <strong>dimensional</strong> organiza y optimiza el dato para análisis; el modelo <strong>semántico</strong> define un contrato estable para consumo de negocio. Se complementan, no se duplican.</div>
-    <div class="tab-hint">Seleccioná una capa para ver su función (clic, Enter o flechas arriba/abajo).</div>
+    <div class="exec-note"> <strong>Fuentes + Staging</strong> conforman la capa de captura y trazabilidad; luego, relacional, dimensional y semántico convierten ese dato en consumo gobernado para negocio.</div>
+    <div class="exec-note"> <strong>Nota: dimensional</strong> organiza y optimiza el dato para análisis; el modelo <strong>semántico</strong> define un contrato estable para consumo de negocio. Se complementan, no se duplican.</div>
+
 
     <div class="tabs-layout">
       <!-- Tabs -->
       <div class="tab-list" role="tablist" aria-label="Capas de arquitectura">
         <button class="tab-btn tc-src is-tab-active" type="button" role="tab" id="tab0" onclick="showPanel(0)" data-tab-index="0" aria-controls="p0" aria-selected="true">
-          <span class="tab-dot" style="background:var(--blue-light)"></span> Fuentes
+          <span class="tab-dot" style="background:var(--blue-light)"></span> Fuentes 
         </button>
         <button class="tab-btn tc-stg" type="button" role="tab" id="tab1" onclick="showPanel(1)" data-tab-index="1" aria-controls="p1" aria-selected="false">
-          <span class="tab-dot" style="background:#D4AC0D"></span> Staging
+          <span class="tab-dot" style="background:#D4AC0D"></span> Staging 
         </button>
         <button class="tab-btn tc-rel" type="button" role="tab" id="tab2" onclick="showPanel(2)" data-tab-index="2" aria-controls="p2" aria-selected="false">
           <span class="tab-dot" style="background:var(--green)"></span> Modelo Relacional
@@ -980,26 +1045,33 @@
       <!-- Panels -->
       <div style="position:relative;">
         <div class="panel is-panel-active" id="p0" role="tabpanel" aria-labelledby="tab0" aria-hidden="false">
-          <div class="ph"><span class="ph-icon">🗄️</span><span class="ph-title">Fuentes de datos</span></div>
-          <div class="ps"><div class="ps-label">Qué es</div>
-            <p>El origen de todos los datos: bases SQL Server, archivos planos, sistemas transaccionales y cualquier otra fuente del banco.</p></div>
-          <div class="ps"><div class="ps-label">Por qué importa</div>
-            <p>La arquitectura respeta las fuentes sin modificarlas. Esto garantiza que siempre se pueda rastrear cada dato hasta su origen — trazabilidad completa.</p></div>
+          <div class="ph"><span class="ph-icon">🗄️</span><span class="ph-title">Fuentes (inicio del linaje)</span></div>
+          <div class="ps"><div class="ps-label">Qué representa</div>
+            <p>Es el origen operativo del dato: SQL Server, archivos y sistemas del banco. Acá empieza el linaje del DATAMART.</p></div>
+          <div class="ps"><div class="ps-label">Criterio de diseño</div>
+            <p>No se altera la fuente original. Se registra qué llegó, cuándo llegó y bajo qué regla se incorporó al proceso.</p></div>
+          <div class="ps"><div class="ps-label">Resultado para negocio</div>
+            <p>Cada número de un reporte puede justificarse con evidencia desde el origen, sin depender de memoria individual.</p></div>
           <div class="tags">
-            <span class="tag" style="background:#EBF8FF;color:var(--blue-dark)">SQL Server</span>
-            <span class="tag" style="background:#EBF8FF;color:var(--blue-dark)">Archivos planos</span>
-            <span class="tag" style="background:#EBF8FF;color:var(--blue-dark)">On-premise</span>
+            <span class="tag" style="background:#EBF8FF;color:var(--blue-dark)">Linaje de dato</span>
+            <span class="tag" style="background:#EBF8FF;color:var(--blue-dark)">Control de origen</span>
+            <span class="tag" style="background:#EBF8FF;color:var(--blue-dark)">Trazabilidad inicial</span>
           </div>
         </div>
 
         <div class="panel" id="p1" role="tabpanel" aria-labelledby="tab1" aria-hidden="true">
-          <div class="ph"><span class="ph-icon">📥</span><span class="ph-title">Staging — Capa de ingesta</span></div>
+          <div class="ph"><span class="ph-icon">📥</span><span class="ph-title">Staging (imagen temporal de la fuente)</span></div>
           <div class="ps"><div class="ps-label">Qué hace</div>
-            <p>Realiza una réplica cruda de los datos sin aplicar transformaciones de negocio. Es una zona de aterrizaje controlada que recibe y registra exactamente lo que llegó.</p></div>
-          <div class="ps"><div class="ps-label">Qué problema resuelve</div>
-            <p>Desacopla las fuentes del procesamiento. Si una fuente cambia o falla, el impacto queda contenido en esta capa y no se propaga al resto de la arquitectura.</p></div>
-          <div class="ps"><div class="ps-label">Analogía de negocio</div>
-            <p>Es la zona de recepción de documentos: los registra tal cual llegan antes de procesarlos. Nada entra al sistema sin pasar por este punto de control.</p></div>
+            <p>Guarda la imagen de la fuente en un momento dado, tal como llegó. Es la foto auditable del dato antes de cualquier lógica de negocio.</p></div>
+          <div class="ps"><div class="ps-label">Por qué es crítico</div>
+            <p>Permite reconstruir el proceso end-to-end: qué dato entró, cómo evolucionó y en qué paso se transformó.</p></div>
+          <div class="ps"><div class="ps-label">Impacto operativo</div>
+            <p>Aísla incidentes de origen y evita que un cambio en fuente rompa todo el DATAMART.</p></div>
+          <div class="tags">
+            <span class="tag" style="background:#FFFBEA;color:#7D6608">Foto temporal</span>
+            <span class="tag" style="background:#FFFBEA;color:#7D6608">Auditoría de proceso</span>
+            <span class="tag" style="background:#FFFBEA;color:#7D6608">Control de ingesta</span>
+          </div>
         </div>
 
         <div class="panel" id="p2" role="tabpanel" aria-labelledby="tab2" aria-hidden="true">
@@ -1007,47 +1079,47 @@
           <div class="ps"><div class="ps-label">Qué hace</div>
             <p>Integra y consolida los datos de múltiples fuentes en un modelo normalizado. Resuelve duplicados, conflictos e inconsistencias entre sistemas.</p></div>
           <div class="ps"><div class="ps-label">Por qué es clave</div>
-            <p>Establece la <strong>única fuente de verdad</strong> del negocio. La lógica de integración se define una sola vez y se reutiliza en todas las capas superiores. Fin de las interpretaciones divergentes.</p></div>
+            <p>Es el <strong>SSOT del DATAMART</strong>: una sola definición de dato para todo el negocio y para toda explotación analítica.</p></div>
           <div class="tags">
             <span class="tag" style="background:#E8F8F4;color:#00695C">Normalización</span>
             <span class="tag" style="background:#E8F8F4;color:#00695C">Integración</span>
-            <span class="tag" style="background:#E8F8F4;color:#00695C">Fuente única de verdad</span>
+            <span class="tag" style="background:#E8F8F4;color:#00695C">SSOT</span>
           </div>
         </div>
 
         <div class="panel" id="p3" role="tabpanel" aria-labelledby="tab3" aria-hidden="true">
           <div class="ph"><span class="ph-icon">📐</span><span class="ph-title">Modelo Dimensional</span></div>
           <div class="ps"><div class="ps-label">Qué hace</div>
-            <p>Organiza la información en hechos y dimensiones para el análisis. Preserva la granularidad, el historial y la consistencia. Es la base analítica reutilizable de la arquitectura.</p></div>
+            <p>Organiza la información en hechos y dimensiones para acelerar análisis y sostener comparabilidad histórica.</p></div>
           <div class="ps"><div class="ps-label">Por qué es necesario</div>
-            <p>Permite que múltiples reportes consuman la misma estructura sin reinterpretar la lógica. Optimizado para consultas analíticas: Power BI y SAS rinden mejor sobre este modelo.</p></div>
+            <p>Permite reusar estructura analítica en múltiples reportes, con mejor performance en Power BI y SAS.</p></div>
           <div class="ps"><div class="ps-label">¿Compite con el modelo semántico?</div>
-            <p>No. Se complementan: el dimensional organiza y optimiza el dato; el semántico lo expone con gobernanza. Capas distintas, roles distintos.</p></div>
+            <p>No. Se complementan: dimensional optimiza el dato; semántico simplifica el consumo con definiciones de negocio gobernadas.</p></div>
         </div>
 
         <div class="panel" id="p4" role="tabpanel" aria-labelledby="tab4" aria-hidden="true">
           <div class="ph"><span class="ph-icon">🧭</span><span class="ph-title">Modelo Semántico</span></div>
           <div class="ps"><div class="ps-label">Qué hace</div>
-            <p>Actúa como el contrato de consumo entre el dato técnico y los analistas. Expone la información de forma simplificada, estable y gobernada, con términos del negocio.</p></div>
+            <p>Actúa como contrato de consumo. Traduce estructura técnica a lenguaje de negocio estable y reutilizable.</p></div>
           <div class="ps"><div class="ps-label">Por qué es clave para la gerencia</div>
-            <p>Evita que cada reporte reinterprete la lógica de negocio. Reduce errores, facilita el onboarding y garantiza que todos los reportes hablen del mismo lenguaje de datos.</p></div>
+            <p>Evita reinterpretaciones por reporte, reduce errores y simplifica el acceso a datos para equipos no técnicos.</p></div>
           <div class="tags">
             <span class="tag" style="background:#F3E5FF;color:var(--purple)">Gobernanza</span>
             <span class="tag" style="background:#F3E5FF;color:var(--purple)">Contrato de consumo</span>
-            <span class="tag" style="background:#F3E5FF;color:var(--purple)">Power BI · SAS</span>
+            <span class="tag" style="background:#F3E5FF;color:var(--purple)">Definiciones de negocio</span>
           </div>
         </div>
 
         <div class="panel" id="p5" role="tabpanel" aria-labelledby="tab5" aria-hidden="true">
           <div class="ph"><span class="ph-icon">📊</span><span class="ph-title">Reportes y análisis</span></div>
           <div class="ps"><div class="ps-label">Qué hace</div>
-            <p>Dashboards en Power BI y análisis en SAS que consumen directamente del modelo semántico, con datos listos, gobernados y consistentes.</p></div>
+            <p>Power BI y SAS consumen un contrato estable del DATAMART, con datos listos para explotación productiva.</p></div>
           <div class="ps"><div class="ps-label">Qué cambia vs. hoy</div>
-            <p>Los reportes ya no definen su propia lógica de negocio. Consumen un contrato estable y validado: mismos datos, mismas definiciones, sin sorpresas.</p></div>
+            <p>El reporte deja de “inventar” lógica propia: consume definiciones comunes, documentadas y trazables.</p></div>
           <div class="tags">
             <span class="tag" style="background:#E8F5E9;color:#2E7D32">Power BI</span>
             <span class="tag" style="background:#E8F5E9;color:#2E7D32">SAS</span>
-            <span class="tag" style="background:#E8F5E9;color:#2E7D32">Self-service analytics</span>
+            <span class="tag" style="background:#E8F5E9;color:#2E7D32">Consumo rápido</span>
           </div>
         </div>
       </div>
@@ -1062,32 +1134,28 @@
   <div class="slide-inner">
     <div class="slide-header">
       <div class="slide-title">Antes y después</div>
-      <div class="slide-sub">El impacto concreto en la operación diaria de la gerencia</div>
+      <div class="slide-sub">Qué cambia en la operación diaria cuando el DATAMART pasa a estar gobernado de punta a punta</div>
     </div>
 
     <div class="vs-grid">
       <div class="vc before">
-        <div class="vc-title">✗ &nbsp;Esquema actual</div>
-        <div class="vc-row"><span class="vbadge">✗</span>Cada ETL define su propia lógica de negocio de forma independiente</div>
-        <div class="vc-row"><span class="vbadge">✗</span>Un mismo indicador puede arrojar valores distintos según el reporte consultado</div>
-        <div class="vc-row"><span class="vbadge">✗</span>Nuevo requerimiento = nuevo ETL desde cero, sin reutilizar nada existente</div>
-        <div class="vc-row"><span class="vbadge">✗</span>Sin trazabilidad: difícil saber de dónde proviene un dato y cuándo cambió</div>
-        <div class="vc-row"><span class="vbadge">✗</span>Un cambio en fuentes puede romper múltiples reportes de forma imprevisible</div>
-        <div class="vc-row"><span class="vbadge">✗</span>Conocimiento concentrado: alta dependencia de personas clave</div>
-        <div class="vc-row"><span class="vbadge">✗</span>Performance limitada por consultas sobre bases no optimizadas para análisis</div>
+        <div class="vc-title">✗ &nbsp;Hoy (sin DATAMART consolidado)</div>
+        <div class="vc-row" data-pair="0"><span class="vbadge">✗</span>Lógica repetida por proceso y por reporte</div>
+        <div class="vc-row" data-pair="1"><span class="vbadge">✗</span>Métricas con resultados distintos según fuente consultada</div>
+        <div class="vc-row" data-pair="2"><span class="vbadge">✗</span>Trazabilidad parcial del dato y del proceso</div>
+        <div class="vc-row" data-pair="3"><span class="vbadge">✗</span>Tiempo alto para crear reportes nuevos</div>
+        <div class="vc-row" data-pair="4"><span class="vbadge">✗</span>Mantenibilidad frágil por dependencia de personas clave</div>
       </div>
 
       <div class="vs-mid"><div class="vs-circle">VS</div></div>
 
       <div class="vc after">
-        <div class="vc-title">✓ &nbsp;Arquitectura propuesta</div>
-        <div class="vc-row"><span class="vbadge">✓</span>Lógica definida una vez en el modelo relacional, reutilizada en todos los reportes</div>
-        <div class="vc-row"><span class="vbadge">✓</span>Un único dato, una única definición: consistencia garantizada entre todos los reportes</div>
-        <div class="vc-row"><span class="vbadge">✓</span>Nuevos reportes se construyen sobre capas existentes — sin reescribir lógica</div>
-        <div class="vc-row"><span class="vbadge">✓</span>Trazabilidad completa: cada dato tiene origen conocido y documentado</div>
-        <div class="vc-row"><span class="vbadge">✓</span>Cambios en fuentes quedan aislados en Staging — no se propagan hacia arriba</div>
-        <div class="vc-row"><span class="vbadge">✓</span>Arquitectura documentada y transferible a cualquier integrante del equipo</div>
-        <div class="vc-row"><span class="vbadge">✓</span>Modelo dimensional optimizado para consultas analíticas de alta performance</div>
+        <div class="vc-title">✓ &nbsp;Con DATAMART de Riesgos</div>
+        <div class="vc-row" data-pair="0"><span class="vbadge">✓</span>Lógica unificada y reutilizable en toda la cadena</div>
+        <div class="vc-row" data-pair="1"><span class="vbadge">✓</span>SSOT: un dato, una definición para negocio y regulación</div>
+        <div class="vc-row" data-pair="2"><span class="vbadge">✓</span>Trazabilidad end-to-end con documentación y metadatos</div>
+        <div class="vc-row" data-pair="3"><span class="vbadge">✓</span>Iteraciones más cortas para entregar reportes productivos</div>
+        <div class="vc-row" data-pair="4"><span class="vbadge">✓</span>Arquitectura más entendible y mantenible en el tiempo</div>
       </div>
     </div>
   </div>
@@ -1100,46 +1168,46 @@
   <div class="slide-inner">
     <div class="slide-header">
       <div class="slide-title">Beneficios concretos</div>
-      <div class="slide-sub">Lo que la gerencia gana con esta arquitectura</div>
+      <div class="slide-sub">Resultados de negocio que habilita el DATAMART de Riesgos</div>
     </div>
 
     <div class="ben-grid stagger">
       <div class="ben-card">
         <div class="ben-icon">🏛️</div>
         <div class="ben-title">Gobernanza real del dato</div>
-        <div class="ben-desc">Estándares, definiciones y lógica de negocio centralizados. El dato tiene dueño, reglas claras y trazabilidad completa.</div>
+        <div class="ben-desc">Reglas, definiciones y controles centralizados para reducir riesgo operativo y regulatorio.</div>
       </div>
       <div class="ben-card">
         <div class="ben-icon">✅</div>
         <div class="ben-title">Fuente única de verdad</div>
-        <div class="ben-desc">Un solo lugar donde vive la lógica. Todos los reportes hablan de los mismos números, sin interpretaciones divergentes.</div>
+        <div class="ben-desc">El DATAMART opera como SSOT: todos los reportes consumen la misma definición de negocio.</div>
       </div>
       <div class="ben-card">
         <div class="ben-icon">⚡</div>
         <div class="ben-title">Mayor agilidad operativa</div>
-        <div class="ben-desc">Nuevos reportes o análisis se construyen sobre capas existentes. Menos tiempo desde el requerimiento hasta el entregable.</div>
+        <div class="ben-desc">Cada iteración amplía cobertura de datos y entrega valor en producción sin esperar un “gran cierre”.</div>
       </div>
       <div class="ben-card">
         <div class="ben-icon">📈</div>
         <div class="ben-title">Escalabilidad ordenada</div>
-        <div class="ben-desc">Nuevos dominios de riesgo se incorporan siguiendo la misma arquitectura. Sin silos, sin duplicación, sin deuda técnica acumulada.</div>
+        <div class="ben-desc">Se incorporan nuevos dominios con el mismo marco de trabajo, evitando silos y retrabajo.</div>
       </div>
       <div class="ben-card">
         <div class="ben-icon">🔧</div>
-        <div class="ben-title">Mantenibilidad</div>
-        <div class="ben-desc">Arquitectura documentada y estructurada. Cada cambio tiene un lugar claro donde aplicarse, sin efectos secundarios inesperados.</div>
+        <div class="ben-title">Mantenibilidad y entendimiento</div>
+        <div class="ben-desc">Documentación y metadatos se mantienen como parte del proceso, no como tarea opcional al final.</div>
       </div>
       <div class="ben-card">
         <div class="ben-icon">🚀</div>
         <div class="ben-title">Performance analítica</div>
-        <div class="ben-desc">Modelo dimensional y semántico optimizados para consultas. Power BI y SAS rinden significativamente mejor sobre esta base.</div>
+        <div class="ben-desc">Modelo dimensional + semántico optimizados para consultas de Power BI y SAS de forma estable.</div>
       </div>
     </div>
 
     <div class="kpi-strip">
-      <div class="kpi-item"><span class="k-label">Indicador de éxito</span><span class="k-value">Menor tiempo para entregar nuevos reportes de riesgo</span></div>
-      <div class="kpi-item"><span class="k-label">Indicador de éxito</span><span class="k-value">Mayor consistencia entre reportes regulatorios y de gestión</span></div>
-      <div class="kpi-item"><span class="k-label">Indicador de éxito</span><span class="k-value">Trazabilidad punta a punta del dato crítico</span></div>
+      <div class="kpi-item"><span class="k-label">Indicador de éxito</span><span class="k-value">Menor tiempo entre requerimiento y reporte productivo</span></div>
+      <div class="kpi-item"><span class="k-label">Indicador de éxito</span><span class="k-value">Consistencia entre reportes de gestión y regulatorios</span></div>
+      <div class="kpi-item"><span class="k-label">Indicador de éxito</span><span class="k-value">Cobertura de documentación y metadatos por iteración</span></div>
     </div>
   </div>
 </section>
@@ -1150,80 +1218,78 @@
 <section class="slide" id="s8" data-dark="false">
   <div class="slide-inner">
     <div class="slide-header">
-      <div class="slide-title">Plan de implementación</div>
-      <div class="slide-sub">Cuatro fases incrementales — cada una entrega valor por sí sola, sin esperar a la siguiente</div>
+      <div class="slide-title">Implementación ágil por iteraciones</div>
+      <div class="slide-sub">Sin fases rígidas: cada iteración amplía datos/modelos y entrega reportes productivos</div>
     </div>
 
-    <div class="timeline">
-      <div class="phase">
-        <div class="ph-circle pc1">📥</div>
-        <div class="ph-num">Fase 1</div>
-        <div class="ph-name">Staging & Ingesta</div>
-        <div class="ph-dur">2 – 3 meses</div>
-        <ul class="ph-tasks">
-          <li>Relevamiento y mapeo de fuentes actuales</li>
-          <li>Diseño e implementación de la capa de staging</li>
-          <li>Procesos de ingesta desacoplados por fuente</li>
-          <li>Monitoreo y alertas de ingesta</li>
+    <div class="iter-grid">
+      <div class="iter i1">
+        <div class="iter-top">
+          <span class="iter-dot">1</span>
+          <span class="iter-num">Iteración inicial</span>
+        </div>
+        <div class="iter-name">Primer alcance productivo</div>
+        <div class="iter-focus">Se consolida captura + trazabilidad y se publica el primer caso de uso operativo.</div>
+        <ul class="iter-tasks">
+          <li><strong>TC - Comportamiento: Seguimiento de tarjetas</strong></li>
+          <li>Registro de linaje de datos y reglas de transformación</li>
+          <li>Documentación funcional y técnica del flujo implementado</li>
         </ul>
       </div>
-      <div class="phase">
-        <div class="ph-circle pc2">🔗</div>
-        <div class="ph-num">Fase 2</div>
-        <div class="ph-name">Modelo Relacional</div>
-        <div class="ph-dur">2 – 3 meses</div>
-        <ul class="ph-tasks">
-          <li>Modelado de datos consolidado</li>
-          <li>Reglas de integración y deduplicación</li>
-          <li>Definición de la fuente única de verdad</li>
-          <li>Documentación y catálogo del modelo</li>
+
+      <div class="iter i2">
+        <div class="iter-top">
+          <span class="iter-dot">2</span>
+          <span class="iter-num">Próximas iteraciones</span>
+        </div>
+        <div class="iter-name">Ampliación de cobertura de negocio</div>
+        <div class="iter-focus">Sobre la misma arquitectura se agregan nuevos datos, modelos y reportes productivos.</div>
+        <ul class="iter-tasks">
+          <li>informe de seguimiento de préstamos</li>
+          <li>base consolidada de solicitudes</li>
+          <li>actualización de metadatos y catálogo de negocio</li>
         </ul>
       </div>
-      <div class="phase">
-        <div class="ph-circle pc3">📐</div>
-        <div class="ph-num">Fase 3</div>
-        <div class="ph-name">Modelo Dimensional</div>
-        <div class="ph-dur">2 – 3 meses</div>
-        <ul class="ph-tasks">
-          <li>Diseño de hechos y dimensiones</li>
-          <li>Carga histórica inicial</li>
-          <li>Optimización para consultas analíticas</li>
-          <li>Validación con áreas de negocio</li>
-        </ul>
-      </div>
-      <div class="phase">
-        <div class="ph-circle pc4">🧭</div>
-        <div class="ph-num">Fase 4</div>
-        <div class="ph-name">Semántico + Reportes</div>
-        <div class="ph-dur">2 – 3 meses</div>
-        <ul class="ph-tasks">
-          <li>Construcción del modelo semántico</li>
-          <li>Migración progresiva de reportes Power BI</li>
-          <li>Adaptación de análisis SAS</li>
-          <li>Capacitación a usuarios de negocio</li>
+
+      <div class="iter i3">
+        <div class="iter-top">
+          <span class="iter-dot">3</span>
+          <span class="iter-num">Escala continua</span>
+        </div>
+        <div class="iter-name">Evolución controlada del DATAMART</div>
+        <div class="iter-focus">El equipo repite el mismo patrón para nuevos dominios y reportes, entre otros.</div>
+        <ul class="iter-tasks">
+          <li>nuevos datasets y modelos reutilizando SSOT</li>
+          <li>nuevos reportes de negocio en producción, entre otros</li>
+          <li>mejora continua de performance, trazabilidad y mantenibilidad</li>
         </ul>
       </div>
     </div>
 
     <div class="rd-note">
-      💡 <strong>Enfoque incremental:</strong> la Fase 1 ya mejora la trazabilidad y estabilidad de los datos. Los reportes pueden empezar a consumir mejoras desde la Fase 2, sin esperar a completar toda la arquitectura.
+      💡 <strong>Clave de ejecución:</strong> cada iteración entrega valor operativo real y deja documentación + metadatos actualizados para la siguiente.
     </div>
     <div class="rd-note decision">
-      🧭 <strong>Decisión requerida:</strong> aprobar la ejecución de Fase 1 y Fase 2 como primer bloque para capturar valor operativo temprano y reducir riesgo regulatorio.
+      🧭 <strong>Decisión requerida:</strong> sostener el enfoque iterativo del DATAMART y medir avance por reportes productivos entregados, no por hitos técnicos aislados.
     </div>
   </div>
 </section>
 
 <!-- ================================================================
-     SLIDE 9 — CIERRE
+  SLIDE 9 — CIERRE
 ================================================================ -->
 <section class="slide" id="s9" data-dark="true">
   <div class="deco deco-1"></div>
   <div class="deco deco-2"></div>
-  <div class="cl-tag">Control de Riesgos — Ingeniería de Datos</div>
-  <h2>Una arquitectura que le da confianza a cada número que aparece en un reporte</h2>
-  <p class="cl-body">Gobernanza, trazabilidad y consistencia no son conceptos técnicos: son la base sobre la que se toman decisiones de riesgo. Esta arquitectura los hace realidad.</p>
-  <div class="cl-cta">¿Preguntas?</div>
+  <div class="cl-tag">DATAMART de Riesgos - Cierre ejecutivo</div>
+  <h2>El DATAMART de Riesgos transforma datos en decisiones más confiables</h2>
+  <p class="cl-body">La propuesta ordena el proceso completo de datos para que negocio opere con resultados consistentes, auditables y sostenibles.</p>
+  <p class="close-intro">Con esta arquitectura, la gerencia logra resultados concretos:</p>
+  <ul class="close-points">
+    <li><strong>MEJOR PERFORMANCE</strong> para análisis en Power BI y SAS.</li>
+    <li><strong>SIMPLICIDAD y RAPIDEZ</strong> para consumir datos y publicar reportes productivos.</li>
+    <li><strong>TRAZABILIDAD y CONFIABILIDAD</strong> del dato de punta a punta.</li>
+  </ul>
 </section>
 
 <script>
@@ -1338,6 +1404,15 @@
   /* =============================================
      LAYER TABS (Slide 5)
   ============================================= */
+  const panelThemes = [
+    { bg: '#F2FAFF', border: '#BEE9FB' },
+    { bg: '#FFFBEF', border: '#F2D98A' },
+    { bg: '#EEF9F5', border: '#A7E0D3' },
+    { bg: '#F2F4FF', border: '#B9C2F6' },
+    { bg: '#F8EEFF', border: '#D7B4F6' },
+    { bg: '#EEF9EF', border: '#B6E2B8' }
+  ];
+
   function showPanel(i) {
     document.querySelectorAll('#s5 .tab-btn').forEach((b, j) => {
       const active = j === i;
@@ -1348,6 +1423,10 @@
       const active = j === i;
       p.classList.toggle('is-panel-active', active);
       p.setAttribute('aria-hidden', active ? 'false' : 'true');
+      if (active) {
+        p.style.setProperty('--panel-bg', panelThemes[i].bg);
+        p.style.setProperty('--panel-border', panelThemes[i].border);
+      }
     });
   }
 
@@ -1371,6 +1450,26 @@
         showPanel(index);
       }
     });
+  });
+
+  showPanel(0);
+
+  /* =============================================
+     BEFORE VS AFTER (Slide 6) pair highlight
+  ============================================= */
+  const pairedRows = Array.from(document.querySelectorAll('#s6 .vc-row[data-pair]'));
+  function highlightPair(pair, active) {
+    pairedRows.forEach((row) => {
+      if (row.dataset.pair === pair) {
+        row.classList.toggle('is-paired', active);
+      }
+    });
+  }
+
+  pairedRows.forEach((row) => {
+    const pair = row.dataset.pair;
+    row.addEventListener('mouseenter', () => highlightPair(pair, true));
+    row.addEventListener('mouseleave', () => highlightPair(pair, false));
   });
 </script>
 </body>

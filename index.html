@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arquitectura de Datos — Control de Riesgos</title>
+  <style>
+    /* =====================================================
+       VARIABLES & RESET
+    ===================================================== */
+    :root {
+      --blue-light: #00AEEF;
+      --blue-dark:  #005BAA;
+      --orange:     #F37053;
+      --purple:     #6B007B;
+      --pink:       #CE819C;
+      --green:      #00B08D;
+      --yellow:     #E9D661;
+      --red:        #EF413D;
+      --bg:         #F5F7FA;
+      --text:       #2D3436;
+      --text-muted: #636E72;
+      --white:      #FFFFFF;
+      --shadow:     0 2px 14px rgba(0,0,0,0.07);
+      --focus-ring: rgba(0, 174, 239, 0.45);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    /* =====================================================
+       SLIDE ENGINE
+    ===================================================== */
+    #deck {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 80px 80px;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(48px);
+      transition: opacity 0.42s ease, transform 0.42s ease;
+    }
+
+    .slide.is-active {
+      opacity: 1;
+      pointer-events: all;
+      transform: translateX(0);
+    }
+
+    .slide.is-exit-back { transform: translateX(48px); opacity: 0; }
+    .slide.is-exit-fwd  { transform: translateX(-48px); opacity: 0; }
+
+    /* =====================================================
+       CHROME — counter, dots, arrows
+    ===================================================== */
+    #counter {
+      position: fixed;
+      bottom: 28px; left: 40px;
+      font-size: 13px;
+      color: var(--text-muted);
+      z-index: 200;
+      letter-spacing: 0.5px;
+    }
+
+    #progress {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 5px;
+      background: #DDE6EF;
+      z-index: 250;
+    }
+
+    #progress-fill {
+      height: 100%;
+      width: 11.11%;
+      background: linear-gradient(90deg, var(--blue-light), var(--blue-dark));
+      transition: width 0.3s ease;
+    }
+
+    #dots {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 9px;
+      z-index: 200;
+    }
+
+    .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #C8D0D8;
+      border: none;
+      cursor: pointer;
+      transition: background 0.25s, transform 0.25s;
+    }
+    .dot.is-active { background: var(--blue-dark); transform: scale(1.35); }
+
+    #arrows {
+      position: fixed;
+      bottom: 22px; right: 40px;
+      display: flex;
+      gap: 10px;
+      z-index: 200;
+    }
+
+    .nav-btn {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      border: 2px solid var(--blue-dark);
+      background: transparent;
+      color: var(--blue-dark);
+      font-size: 15px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+    .nav-btn:hover:not(:disabled) { background: var(--blue-dark); color: #fff; }
+    .nav-btn:disabled { border-color: #C8D0D8; color: #C8D0D8; cursor: default; }
+
+    .dot:focus-visible,
+    .nav-btn:focus-visible,
+    #s5 .tab-btn:focus-visible {
+      outline: 3px solid var(--focus-ring);
+      outline-offset: 2px;
+    }
+
+    /* Dark-slide chrome overrides */
+    .dark-chrome #counter,
+    .dark-chrome .dot { color: rgba(255,255,255,0.45); }
+    .dark-chrome .dot { background: rgba(255,255,255,0.25); }
+    .dark-chrome .dot.is-active { background: #fff; }
+    .dark-chrome .nav-btn { border-color: rgba(255,255,255,0.5); color: rgba(255,255,255,0.8); }
+    .dark-chrome .nav-btn:hover:not(:disabled) { background: rgba(255,255,255,0.15); }
+
+    /* =====================================================
+       SHARED COMPONENTS
+    ===================================================== */
+    .slide-header { margin-bottom: 28px; }
+    .slide-title  { font-size: 32px; font-weight: 700; color: var(--blue-dark); line-height: 1.2; }
+    .slide-sub    { font-size: 16px; color: var(--text-muted); margin-top: 6px; }
+    .slide-inner  { width: 100%; max-width: 1100px; }
+
+    .accent-bar { width: 48px; height: 4px; border-radius: 2px; background: var(--blue-light); }
+
+    .card {
+      background: var(--white);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 22px 24px;
+    }
+
+    /* Fade-in stagger for children */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .stagger > * { opacity: 0; }
+    .is-active .stagger > *:nth-child(1) { animation: fadeUp 0.45s ease 0.08s forwards; }
+    .is-active .stagger > *:nth-child(2) { animation: fadeUp 0.45s ease 0.18s forwards; }
+    .is-active .stagger > *:nth-child(3) { animation: fadeUp 0.45s ease 0.28s forwards; }
+    .is-active .stagger > *:nth-child(4) { animation: fadeUp 0.45s ease 0.38s forwards; }
+    .is-active .stagger > *:nth-child(5) { animation: fadeUp 0.45s ease 0.46s forwards; }
+    .is-active .stagger > *:nth-child(6) { animation: fadeUp 0.45s ease 0.54s forwards; }
+
+    /* =====================================================
+       SLIDE 1 — PORTADA
+    ===================================================== */
+    #s1 {
+      background: var(--white);
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      padding-left: 120px;
+    }
+
+    #s1 .eyebrow {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 3.5px;
+      text-transform: uppercase;
+      color: var(--blue-light);
+      margin-bottom: 18px;
+      opacity: 0;
+    }
+    #s1 .bar       { opacity: 0; margin-bottom: 28px; }
+    #s1 h1         { opacity: 0; font-size: 48px; font-weight: 800; color: var(--blue-dark); line-height: 1.18; max-width: 680px; margin-bottom: 20px; }
+    #s1 .cover-sub { opacity: 0; font-size: 19px; color: var(--text-muted); max-width: 580px; line-height: 1.65; margin-bottom: 44px; }
+    #s1 .meta      { opacity: 0; display: flex; gap: 28px; font-size: 13px; color: var(--text-muted); }
+    #s1 .meta span { display: flex; align-items: center; gap: 6px; }
+
+    #s1.is-active .eyebrow  { animation: fadeUp 0.5s ease 0.1s  forwards; }
+    #s1.is-active .bar      { animation: fadeUp 0.5s ease 0.2s  forwards; }
+    #s1.is-active h1        { animation: fadeUp 0.55s ease 0.32s forwards; }
+    #s1.is-active .cover-sub{ animation: fadeUp 0.55s ease 0.46s forwards; }
+    #s1.is-active .meta     { animation: fadeUp 0.55s ease 0.60s forwards; }
+
+    /* =====================================================
+       SLIDE 2 — SITUACIÓN ACTUAL
+    ===================================================== */
+    #s2 .diag-wrap {
+      background: var(--white);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 20px 18px 16px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    /* SVG diagram is inside .diag-wrap */
+
+    #s2 .problems {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    #s2 .prob {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      background: var(--white);
+      border-left: 3px solid var(--orange);
+      border-radius: 0 8px 8px 0;
+      box-shadow: var(--shadow);
+      padding: 11px 14px;
+    }
+
+    #s2 .prob-dot {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--orange);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    #s2 .prob strong { font-size: 13px; display: block; margin-bottom: 2px; color: var(--text); }
+    #s2 .prob p      { font-size: 12px; color: var(--text-muted); line-height: 1.45; }
+
+    /* =====================================================
+       SLIDE 3 — ¿POR QUÉ CAMBIAR?
+    ===================================================== */
+    #s3 .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    #s3 .risk-card {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 22px 24px;
+      box-shadow: var(--shadow);
+    }
+    #s3 .risk-card.danger { border-top: 4px solid var(--red); }
+    #s3 .risk-card.warning{ border-top: 4px solid var(--orange); }
+    #s3 .risk-card h3     { font-size: 15px; font-weight: 700; margin-bottom: 14px; color: var(--text); }
+
+    #s3 .risk-list { list-style: none; }
+    #s3 .risk-list li {
+      display: flex; align-items: flex-start; gap: 9px;
+      font-size: 13px; color: var(--text); line-height: 1.5;
+      padding: 8px 0;
+      border-bottom: 1px solid #F0F0F0;
+    }
+    #s3 .risk-list li:last-child { border-bottom: none; }
+    #s3 .risk-list li::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 6px;
+    }
+    #s3 .danger .risk-list li::before { background: var(--red); }
+    #s3 .warning .risk-list li::before { background: var(--orange); }
+
+    #s3 .impact {
+      grid-column: 1 / -1;
+      background: #FFF6F0;
+      border: 1.5px solid var(--orange);
+      border-radius: 12px;
+      padding: 20px 24px;
+      display: flex; align-items: center; gap: 20px;
+    }
+    #s3 .impact .icon { font-size: 34px; flex-shrink: 0; }
+    #s3 .impact p     { font-size: 14px; color: var(--text); line-height: 1.65; }
+    #s3 .impact strong{ color: var(--red); }
+
+    /* =====================================================
+       SLIDE 4 — ARQUITECTURA PROPUESTA
+    ===================================================== */
+    #s4 .arch-card {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 24px 18px;
+      box-shadow: var(--shadow);
+      margin-bottom: 18px;
+    }
+
+    #s4 .arch-flow {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+    }
+
+    #s4 .layer-box {
+      flex: 1;
+      border-radius: 10px;
+      padding: 14px 10px 12px;
+      text-align: center;
+      transition: transform 0.2s;
+      cursor: default;
+    }
+    #s4 .layer-box:hover { transform: translateY(-4px); }
+    #s4 .layer-box .licon { font-size: 22px; display: block; margin-bottom: 5px; }
+    #s4 .layer-box .lname { font-size: 13px; font-weight: 700; display: block; margin-bottom: 4px; }
+    #s4 .layer-box .ldesc { font-size: 11.5px; line-height: 1.4; opacity: 0.88; }
+
+    #s4 .l-arrow {
+      display: flex; align-items: center; justify-content: center;
+      padding: 0 5px; color: #BDC3C7; font-size: 17px; flex-shrink: 0;
+    }
+
+    .lb-src  { background: #EBF8FF; border: 2px solid var(--blue-light); color: #005080; }
+    .lb-stg  { background: #FFFBEA; border: 2px solid #D4AC0D; color: #7D6608; }
+    .lb-rel  { background: #E8F8F4; border: 2px solid var(--green);      color: #00695C; }
+    .lb-dim  { background: #EEF2FF; border: 2px solid #5C6BC0;           color: #3949AB; }
+    .lb-sem  { background: #F3E5FF; border: 2px solid var(--purple);     color: var(--purple); }
+    .lb-rep  { background: #E8F5E9; border: 2px solid #43A047;           color: #2E7D32; }
+
+    #s4 .pillars {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    #s4 .pillar {
+      background: var(--white);
+      border-radius: 10px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+      border-left: 3px solid var(--blue-light);
+      font-size: 12px;
+    }
+    #s4 .pillar strong { font-size: 13px; display: block; color: var(--blue-dark); margin-bottom: 4px; }
+    #s4 .pillar.green  { border-left-color: var(--green); }
+    #s4 .pillar.purple { border-left-color: var(--purple); }
+
+    /* =====================================================
+       SLIDE 5 — DETALLE DE CAPAS
+    ===================================================== */
+    #s5 .tabs-layout {
+      display: grid;
+      grid-template-columns: 195px 1fr;
+      gap: 18px;
+      height: 400px;
+    }
+
+    #s5 .exec-note {
+      margin-bottom: 12px;
+      background: #F0F7FF;
+      border-left: 4px solid var(--blue-light);
+      border-radius: 0 8px 8px 0;
+      padding: 11px 14px;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.55;
+    }
+    #s5 .exec-note strong { color: var(--blue-dark); }
+
+    #s5 .tab-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    #s5 .tab-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    #s5 .tab-btn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 2px solid transparent;
+      background: var(--white);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      font-size: 12px; font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    #s5 .tab-btn:hover:not(.is-tab-active) { background: #F0F4FF; }
+
+    #s5 .tab-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    #s5 .tab-btn.is-tab-active { color: var(--white); border-color: transparent; }
+    #s5 .tab-btn.is-tab-active .tab-dot { background: rgba(255,255,255,0.8) !important; }
+
+    .tc-src.is-tab-active  { background: var(--blue-light); }
+    .tc-stg.is-tab-active  { background: #D4AC0D; }
+    .tc-rel.is-tab-active  { background: var(--green); }
+    .tc-dim.is-tab-active  { background: #5C6BC0; }
+    .tc-sem.is-tab-active  { background: var(--purple); }
+    .tc-rep.is-tab-active  { background: #43A047; }
+
+    #s5 .panel {
+      display: none;
+      background: var(--white);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 24px 28px;
+      overflow-y: auto;
+      animation: fadeUp 0.3s ease forwards;
+    }
+    #s5 .panel.is-panel-active { display: block; }
+
+    #s5 .ph { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 2px solid #F0F0F0; }
+    #s5 .ph-icon  { font-size: 26px; }
+    #s5 .ph-title { font-size: 18px; font-weight: 700; color: var(--blue-dark); }
+
+    #s5 .ps { margin-bottom: 14px; }
+    #s5 .ps-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); margin-bottom: 5px; }
+    #s5 .ps p     { font-size: 13.5px; color: var(--text); line-height: 1.6; }
+
+    #s5 .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    #s5 .tag  { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+
+    /* =====================================================
+       SLIDE 6 — ANTES VS DESPUÉS
+    ===================================================== */
+    #s6 .vs-grid {
+      display: grid;
+      grid-template-columns: 1fr 52px 1fr;
+      gap: 0;
+      align-items: stretch;
+    }
+
+    #s6 .vc {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 22px 22px;
+      box-shadow: var(--shadow);
+    }
+    #s6 .vc.before { border-top: 4px solid var(--red); }
+    #s6 .vc.after  { border-top: 4px solid var(--green); }
+
+    #s6 .vc-title {
+      font-size: 14px; font-weight: 700;
+      margin-bottom: 14px;
+      display: flex; align-items: center; gap: 7px;
+    }
+    #s6 .before .vc-title { color: var(--red); }
+    #s6 .after  .vc-title { color: var(--green); }
+
+    #s6 .vc-row {
+      display: flex; align-items: flex-start; gap: 9px;
+      font-size: 12.5px; color: var(--text); line-height: 1.5;
+      padding: 8px 0; border-bottom: 1px solid #F5F5F5;
+    }
+    #s6 .vc-row:last-child { border-bottom: none; }
+
+    #s6 .vbadge {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 700; color: #fff;
+      flex-shrink: 0; margin-top: 1px;
+    }
+    #s6 .before .vbadge { background: var(--red); }
+    #s6 .after  .vbadge { background: var(--green); }
+
+    #s6 .vs-mid {
+      display: flex; align-items: center; justify-content: center;
+    }
+    #s6 .vs-circle {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: var(--blue-dark);
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+    }
+
+    /* =====================================================
+       SLIDE 7 — BENEFICIOS
+    ===================================================== */
+    #s7 .ben-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    #s7 .ben-card {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      border-bottom: 3px solid var(--green);
+      transition: transform 0.2s;
+    }
+    #s7 .ben-card:hover { transform: translateY(-4px); }
+
+    #s7 .ben-icon {
+      width: 44px; height: 44px;
+      background: #E5F7F3;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; margin-bottom: 12px;
+    }
+    #s7 .ben-title { font-size: 14px; font-weight: 700; margin-bottom: 5px; color: var(--text); }
+    #s7 .ben-desc  { font-size: 12.5px; color: var(--text-muted); line-height: 1.55; }
+
+    #s7 .kpi-strip {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    #s7 .kpi-item {
+      background: #fff;
+      border-radius: 10px;
+      border-left: 3px solid var(--pink);
+      box-shadow: var(--shadow);
+      padding: 10px 12px;
+    }
+    #s7 .kpi-item .k-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+      display: block;
+    }
+    #s7 .kpi-item .k-value {
+      font-size: 13px;
+      color: var(--text);
+      font-weight: 600;
+      line-height: 1.45;
+    }
+
+    /* =====================================================
+       SLIDE 8 — ROADMAP
+    ===================================================== */
+    #s8 .timeline {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      position: relative;
+      margin-top: 24px;
+      margin-bottom: 20px;
+    }
+
+    #s8 .timeline::before {
+      content: '';
+      position: absolute;
+      top: 30px;
+      left: calc(12.5% + 4px);
+      right: calc(12.5% + 4px);
+      height: 3px;
+      background: linear-gradient(90deg, var(--blue-light), var(--green));
+      z-index: 0;
+    }
+
+    #s8 .phase {
+      display: flex; flex-direction: column; align-items: center;
+      text-align: center; padding: 0 10px;
+      position: relative; z-index: 1;
+    }
+
+    #s8 .ph-circle {
+      width: 60px; height: 60px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; margin-bottom: 12px;
+      box-shadow: 0 0 0 5px var(--bg);
+    }
+    .pc1 { background: #EBF8FF; border: 2.5px solid var(--blue-light); }
+    .pc2 { background: #E8F8F4; border: 2.5px solid var(--green); }
+    .pc3 { background: #EEF2FF; border: 2.5px solid #5C6BC0; }
+    .pc4 { background: #F3E5FF; border: 2.5px solid var(--purple); }
+
+    #s8 .ph-num  { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 4px; }
+    #s8 .ph-name { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+    #s8 .ph-dur  { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+
+    #s8 .ph-tasks { list-style: none; text-align: left; width: 100%; }
+    #s8 .ph-tasks li {
+      font-size: 12px; color: var(--text-muted); line-height: 1.45;
+      padding: 4px 0; border-bottom: 1px solid #F0F0F0;
+      display: flex; align-items: flex-start; gap: 5px;
+    }
+    #s8 .ph-tasks li:last-child { border-bottom: none; }
+    #s8 .ph-tasks li::before { content: '›'; color: var(--blue-light); flex-shrink: 0; font-size: 13px; line-height: 1.3; }
+
+    #s8 .rd-note {
+      background: var(--white);
+      border-left: 4px solid var(--blue-light);
+      border-radius: 0 8px 8px 0;
+      padding: 13px 18px;
+      font-size: 13px; color: var(--text-muted);
+      box-shadow: var(--shadow);
+    }
+    #s8 .rd-note strong { color: var(--blue-dark); }
+
+    #s8 .rd-note.decision {
+      margin-top: 10px;
+      border-left-color: var(--purple);
+    }
+
+    /* =====================================================
+       SLIDE 9 — CIERRE
+    ===================================================== */
+    #s9 {
+      background: var(--blue-dark);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    #s9 .cl-tag  { font-size: 10px; font-weight: 700; letter-spacing: 3.5px; text-transform: uppercase; color: var(--blue-light); margin-bottom: 20px; opacity: 0; }
+    #s9 h2       { font-size: 38px; font-weight: 800; color: #fff; max-width: 740px; line-height: 1.25; margin-bottom: 22px; opacity: 0; }
+    #s9 .cl-body { font-size: 16px; color: rgba(255,255,255,0.55); max-width: 580px; line-height: 1.7; margin-bottom: 40px; opacity: 0; }
+    #s9 .cl-cta  { padding: 13px 34px; border: 2px solid rgba(255,255,255,0.3); border-radius: 40px; color: #fff; font-size: 14px; font-weight: 500; opacity: 0; }
+    #s9 .deco    { position: absolute; border-radius: 50%; pointer-events: none; }
+    #s9 .deco-1  { width: 320px; height: 320px; background: rgba(0,174,239,0.06); top: -60px; right: -60px; }
+    #s9 .deco-2  { width: 220px; height: 220px; background: rgba(0,176,141,0.05); bottom: -40px; left: -40px; }
+
+    #s9.is-active .cl-tag  { animation: fadeUp 0.5s ease 0.1s  forwards; }
+    #s9.is-active h2       { animation: fadeUp 0.55s ease 0.25s forwards; }
+    #s9.is-active .cl-body { animation: fadeUp 0.55s ease 0.4s  forwards; }
+    #s9.is-active .cl-cta  { animation: fadeUp 0.55s ease 0.55s forwards; }
+
+    @media (max-width: 1366px), (max-height: 820px) {
+      .slide { padding: 46px 56px 72px; }
+      .slide-title { font-size: 29px; }
+      #s1 { padding-left: 76px; }
+      #s1 h1 { font-size: 40px; }
+      #s5 .tabs-layout { height: 360px; grid-template-columns: 185px 1fr; }
+      #s8 .timeline { margin-top: 16px; }
+    }
+
+    @media (max-width: 1180px) {
+      #s2 .problems,
+      #s4 .pillars,
+      #s7 .ben-grid,
+      #s7 .kpi-strip {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      #s8 .timeline {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px 14px;
+      }
+      #s8 .timeline::before { display: none; }
+      #s6 .vs-grid { grid-template-columns: 1fr; gap: 12px; }
+      #s6 .vs-mid { order: -1; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- CHROME -->
+<div id="progress" aria-hidden="true"><div id="progress-fill"></div></div>
+<div id="counter" aria-live="polite"><span id="cur">1</span> / <span id="tot">9</span></div>
+<div id="dots" role="navigation" aria-label="Navegación de slides"></div>
+<div id="arrows">
+  <button class="nav-btn" id="btn-prev" type="button" onclick="go(-1)" aria-label="Slide anterior">&#8592;</button>
+  <button class="nav-btn" id="btn-next" type="button" onclick="go(1)" aria-label="Slide siguiente">&#8594;</button>
+</div>
+
+<!-- ================================================================
+     SLIDE 1 — PORTADA
+================================================================ -->
+<section class="slide is-active" id="s1" data-dark="false">
+  <div class="eyebrow">Gerencia de Control de Riesgos</div>
+  <div class="accent-bar bar"></div>
+  <h1>Arquitectura de Datos<br>para Control de Riesgos</h1>
+  <p class="cover-sub">Propuesta de reorganización para una gestión de datos más robusta, gobernable y escalable</p>
+  <div class="meta">
+    <span>📅 Abril 2026</span>
+    <span>🏦 Gerencia de Control de Riesgos</span>
+    <span>📊 Ingeniería de Datos</span>
+  </div>
+</section>
+
+<!-- ================================================================
+     SLIDE 2 — SITUACIÓN ACTUAL
+================================================================ -->
+<section class="slide" id="s2" data-dark="false">
+  <div class="slide-inner">
+    <div class="slide-header stagger">
+      <div class="slide-title">El escenario actual</div>
+      <div class="slide-sub">Cómo fluyen hoy los datos en la gerencia — sin coordinación, sin estándares compartidos</div>
+    </div>
+
+    <!-- Current-state diagram (SVG) -->
+    <div class="diag-wrap">
+      <svg viewBox="0 0 900 170" width="100%" height="170" xmlns="http://www.w3.org/2000/svg" style="overflow:visible;">
+        <defs>
+          <marker id="ah" markerWidth="8" markerHeight="8" refX="7" refY="3.5" orient="auto">
+            <polygon points="0 0, 8 3.5, 0 7" fill="#BDC3C7"/>
+          </marker>
+          <marker id="ah-orange" markerWidth="8" markerHeight="8" refX="7" refY="3.5" orient="auto">
+            <polygon points="0 0, 8 3.5, 0 7" fill="#F37053"/>
+          </marker>
+        </defs>
+
+        <!-- GROUP LABELS -->
+        <text x="80"  y="14" text-anchor="middle" font-size="10" font-weight="700" fill="#94A3B8" letter-spacing="1">FUENTES</text>
+        <text x="280" y="14" text-anchor="middle" font-size="10" font-weight="700" fill="#C0392B" letter-spacing="1">ETLs INDEPENDIENTES</text>
+        <text x="500" y="14" text-anchor="middle" font-size="10" font-weight="700" fill="#C0392B" letter-spacing="1">BASES DESNORMALIZADAS</text>
+        <text x="730" y="14" text-anchor="middle" font-size="10" font-weight="700" fill="#27AE60" letter-spacing="1">REPORTES</text>
+
+        <!-- SOURCE BOXES -->
+        <rect x="10"  y="22" width="140" height="26" rx="5" fill="#EBF8FF" stroke="#00AEEF" stroke-width="1.5"/>
+        <text x="80"  y="39" text-anchor="middle" font-size="11" font-weight="600" fill="#005BAA">SQL Server A</text>
+        <rect x="10"  y="56" width="140" height="26" rx="5" fill="#EBF8FF" stroke="#00AEEF" stroke-width="1.5"/>
+        <text x="80"  y="73" text-anchor="middle" font-size="11" font-weight="600" fill="#005BAA">SQL Server B</text>
+        <rect x="10"  y="90" width="140" height="26" rx="5" fill="#EBF8FF" stroke="#00AEEF" stroke-width="1.5"/>
+        <text x="80"  y="107" text-anchor="middle" font-size="11" font-weight="600" fill="#005BAA">Archivos planos</text>
+        <rect x="10"  y="124" width="140" height="26" rx="5" fill="#EBF8FF" stroke="#00AEEF" stroke-width="1.5"/>
+        <text x="80"  y="141" text-anchor="middle" font-size="11" font-weight="600" fill="#005BAA">Otras fuentes</text>
+
+        <!-- ETL BOXES -->
+        <rect x="190" y="22" width="160" height="26" rx="5" fill="#FFF5F0" stroke="#F37053" stroke-width="1.5"/>
+        <text x="270" y="39" text-anchor="middle" font-size="11" font-weight="600" fill="#C0392B">ETL Riesgo Crédito</text>
+        <rect x="190" y="56" width="160" height="26" rx="5" fill="#FFF5F0" stroke="#F37053" stroke-width="1.5"/>
+        <text x="270" y="73" text-anchor="middle" font-size="11" font-weight="600" fill="#C0392B">ETL Riesgo Regulatorio</text>
+        <rect x="190" y="90" width="160" height="26" rx="5" fill="#FFF5F0" stroke="#F37053" stroke-width="1.5"/>
+        <text x="270" y="107" text-anchor="middle" font-size="11" font-weight="600" fill="#C0392B">ETL Riesgo Operacional</text>
+        <rect x="190" y="124" width="160" height="26" rx="5" fill="#FFF5F0" stroke="#F37053" stroke-width="1.5"/>
+        <text x="270" y="141" text-anchor="middle" font-size="11" font-weight="600" fill="#C0392B">ETL Indicadores</text>
+
+        <!-- DB BOXES -->
+        <rect x="410" y="22" width="168" height="26" rx="5" fill="#FFF0F0" stroke="#EF413D" stroke-width="1.5"/>
+        <text x="494" y="39" text-anchor="middle" font-size="11" font-weight="600" fill="#C0392B">BD Crédito (propia)</text>
+        <rect x="410" y="56" width="168" height="26" rx="5" fill="#FFF0F0" stroke="#EF413D" stroke-width="1.5"/>
+        <text x="494" y="73" text-anchor="middle" font-size="11" font-weight="600" fill="#C0392B">BD Regulatorio (propia)</text>
+        <rect x="410" y="90" width="168" height="26" rx="5" fill="#FFF0F0" stroke="#EF413D" stroke-width="1.5"/>
+        <text x="494" y="107" text-anchor="middle" font-size="11" font-weight="600" fill="#C0392B">BD Operacional (propia)</text>
+        <rect x="410" y="124" width="168" height="26" rx="5" fill="#FFF0F0" stroke="#EF413D" stroke-width="1.5"/>
+        <text x="494" y="141" text-anchor="middle" font-size="11" font-weight="600" fill="#C0392B">BD KPIs (propia)</text>
+
+        <!-- REPORT BOXES -->
+        <rect x="640" y="45" width="130" height="32" rx="5" fill="#E8F5E9" stroke="#43A047" stroke-width="1.5"/>
+        <text x="705" y="65" text-anchor="middle" font-size="12" font-weight="600" fill="#2E7D32">Power BI</text>
+        <rect x="640" y="93" width="130" height="32" rx="5" fill="#E8F5E9" stroke="#43A047" stroke-width="1.5"/>
+        <text x="705" y="113" text-anchor="middle" font-size="12" font-weight="600" fill="#2E7D32">SAS</text>
+
+        <!-- ARROWS: sources → ETLs (messy, many-to-many feel) -->
+        <line x1="152" y1="35" x2="188" y2="35" stroke="#BDC3C7" stroke-width="1.5" marker-end="url(#ah)"/>
+        <line x1="152" y1="69" x2="188" y2="69" stroke="#BDC3C7" stroke-width="1.5" marker-end="url(#ah)"/>
+        <line x1="152" y1="103" x2="188" y2="103" stroke="#BDC3C7" stroke-width="1.5" marker-end="url(#ah)"/>
+        <line x1="152" y1="137" x2="188" y2="137" stroke="#BDC3C7" stroke-width="1.5" marker-end="url(#ah)"/>
+        <!-- Cross arrow to show disorder -->
+        <line x1="152" y1="35" x2="188" y2="130" stroke="#F37053" stroke-width="1" stroke-dasharray="4 3" opacity="0.5"/>
+        <line x1="152" y1="69" x2="188" y2="125" stroke="#F37053" stroke-width="1" stroke-dasharray="4 3" opacity="0.5"/>
+
+        <!-- ARROWS: ETLs → DBs -->
+        <line x1="352" y1="35"  x2="408" y2="35"  stroke="#BDC3C7" stroke-width="1.5" marker-end="url(#ah)"/>
+        <line x1="352" y1="69"  x2="408" y2="69"  stroke="#BDC3C7" stroke-width="1.5" marker-end="url(#ah)"/>
+        <line x1="352" y1="103" x2="408" y2="103" stroke="#BDC3C7" stroke-width="1.5" marker-end="url(#ah)"/>
+        <line x1="352" y1="137" x2="408" y2="137" stroke="#BDC3C7" stroke-width="1.5" marker-end="url(#ah)"/>
+
+        <!-- ARROWS: DBs → Reports (all to all) -->
+        <line x1="580" y1="35"  x2="638" y2="61"  stroke="#BDC3C7" stroke-width="1.5" marker-end="url(#ah)"/>
+        <line x1="580" y1="69"  x2="638" y2="61"  stroke="#BDC3C7" stroke-width="1.5" marker-end="url(#ah)"/>
+        <line x1="580" y1="103" x2="638" y2="109" stroke="#BDC3C7" stroke-width="1.5" marker-end="url(#ah)"/>
+        <line x1="580" y1="137" x2="638" y2="109" stroke="#BDC3C7" stroke-width="1.5" marker-end="url(#ah)"/>
+        <!-- Cross DBs → Reports (disorder) -->
+        <line x1="580" y1="35" x2="638" y2="109" stroke="#F37053" stroke-width="1" stroke-dasharray="4 3" opacity="0.4"/>
+        <line x1="580" y1="137" x2="638" y2="61" stroke="#F37053" stroke-width="1" stroke-dasharray="4 3" opacity="0.4"/>
+
+        <!-- Warning label -->
+        <text x="448" y="162" text-anchor="middle" font-size="10" font-weight="600" fill="#F37053">⚠ Cada proceso define su propia lógica — sin coordinación, sin fuente única de verdad</text>
+      </svg>
+    </div>
+
+    <!-- Problems grid -->
+    <div class="problems stagger">
+      <div class="prob">
+        <div class="prob-dot">!</div>
+        <div><strong>Múltiples fuentes de verdad</strong><p>Cada ETL define su lógica. Un mismo indicador puede diferir entre reportes.</p></div>
+      </div>
+      <div class="prob">
+        <div class="prob-dot">!</div>
+        <div><strong>Poca gobernanza</strong><p>Sin modelo centralizado ni estándares compartidos entre procesos.</p></div>
+      </div>
+      <div class="prob">
+        <div class="prob-dot">!</div>
+        <div><strong>Baja agilidad</strong><p>Cada nuevo requerimiento exige construir un ETL nuevo desde cero.</p></div>
+      </div>
+      <div class="prob">
+        <div class="prob-dot">!</div>
+        <div><strong>Pobre performance</strong><p>Consultas directas sobre bases desnormalizadas sin optimización analítica.</p></div>
+      </div>
+      <div class="prob">
+        <div class="prob-dot">!</div>
+        <div><strong>Difícil mantenimiento</strong><p>Procesos dispersos, sin documentación ni trazabilidad del dato.</p></div>
+      </div>
+      <div class="prob">
+        <div class="prob-dot">!</div>
+        <div><strong>Escasa escalabilidad</strong><p>El esquema no soporta el crecimiento ordenado de nuevos dominios.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     SLIDE 3 — ¿POR QUÉ CAMBIAR?
+================================================================ -->
+<section class="slide" id="s3" data-dark="false">
+  <div class="slide-inner">
+    <div class="slide-header">
+      <div class="slide-title">¿Qué pasa si no actuamos?</div>
+      <div class="slide-sub">El costo de mantener el esquema actual no es técnico — es de confiabilidad del dato</div>
+    </div>
+
+    <div class="grid stagger">
+      <div class="risk-card danger">
+        <h3>🔴 Riesgos inmediatos</h3>
+        <ul class="risk-list">
+          <li>Reportes con cifras inconsistentes expuestos ante reguladores o la alta dirección</li>
+          <li>Decisiones basadas en datos que no coinciden entre fuentes distintas</li>
+          <li>Incapacidad de responder ágilmente ante auditorías o requerimientos regulatorios</li>
+          <li>Pérdida de confianza en los datos por parte de las áreas de negocio</li>
+        </ul>
+      </div>
+
+      <div class="risk-card warning">
+        <h3>🟠 Riesgos a mediano plazo</h3>
+        <ul class="risk-list">
+          <li>Cada nuevo dominio de riesgo suma más deuda técnica sin resolver la anterior</li>
+          <li>Costo de mantenimiento creciente con alta dependencia de personas clave</li>
+          <li>Dificultad para incorporar nuevas herramientas o satisfacer exigencias regulatorias</li>
+          <li>Silos de información que impiden una visión consolidada del riesgo</li>
+        </ul>
+      </div>
+
+      <div class="impact">
+        <div class="icon">⚡</div>
+        <p>El problema no es técnico: es de <strong>confiabilidad y gobernanza del dato</strong>. Sin una arquitectura ordenada, la gerencia de control de riesgos opera sobre una base que <strong>no garantiza consistencia</strong>. Y eso, en sí mismo, es un riesgo.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     SLIDE 4 — ARQUITECTURA PROPUESTA
+================================================================ -->
+<section class="slide" id="s4" data-dark="false">
+  <div class="slide-inner">
+    <div class="slide-header">
+      <div class="slide-title">La arquitectura propuesta</div>
+      <div class="slide-sub">Un flujo por capas con responsabilidades claras, separadas y documentadas</div>
+    </div>
+
+    <div class="arch-card">
+      <div class="arch-flow">
+        <div class="layer-box lb-src">
+          <span class="licon">🗄️</span>
+          <span class="lname">Fuentes</span>
+          <span class="ldesc">SQL Server, archivos planos, sistemas del banco</span>
+        </div>
+        <div class="l-arrow">▶</div>
+        <div class="layer-box lb-stg">
+          <span class="licon">📥</span>
+          <span class="lname">Staging</span>
+          <span class="ldesc">Ingesta cruda, sin transformación. Zona de aterrizaje controlada</span>
+        </div>
+        <div class="l-arrow">▶</div>
+        <div class="layer-box lb-rel">
+          <span class="licon">🔗</span>
+          <span class="lname">Modelo Relacional</span>
+          <span class="ldesc">Integración y consolidación. Única fuente de verdad</span>
+        </div>
+        <div class="l-arrow">▶</div>
+        <div class="layer-box lb-dim">
+          <span class="licon">📐</span>
+          <span class="lname">Modelo Dimensional</span>
+          <span class="ldesc">Hechos y dimensiones para análisis. Base analítica reutilizable</span>
+        </div>
+        <div class="l-arrow">▶</div>
+        <div class="layer-box lb-sem">
+          <span class="licon">🧭</span>
+          <span class="lname">Modelo Semántico</span>
+          <span class="ldesc">Contrato de consumo gobernado para analistas y reportes</span>
+        </div>
+        <div class="l-arrow">▶</div>
+        <div class="layer-box lb-rep">
+          <span class="licon">📊</span>
+          <span class="lname">Reportes</span>
+          <span class="ldesc">Power BI y SAS sobre datos listos, consistentes y gobernados</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="pillars stagger">
+      <div class="pillar">
+        <strong>Separación de responsabilidades</strong>
+        Cada capa tiene un rol específico. Cambiar una no impacta a las demás: las fuentes pueden evolucionar sin romper los reportes.
+      </div>
+      <div class="pillar green">
+        <strong>Única fuente de verdad</strong>
+        La lógica de negocio se define una sola vez en el modelo relacional y se reutiliza hacia arriba. Todos los reportes hablan de los mismos números.
+      </div>
+      <div class="pillar purple">
+        <strong>Escalabilidad ordenada</strong>
+        Nuevos dominios de riesgo se incorporan siguiendo el mismo esquema. Sin silos, sin duplicación, sin deuda técnica nueva.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     SLIDE 5 — DETALLE DE CAPAS
+================================================================ -->
+<section class="slide" id="s5" data-dark="false">
+  <div class="slide-inner">
+    <div class="slide-header">
+      <div class="slide-title">¿Qué hace cada capa?</div>
+      <div class="slide-sub">Rol, propósito y problema que resuelve cada componente de la arquitectura</div>
+    </div>
+
+    <div class="exec-note"><strong>Mensaje ejecutivo clave:</strong> el modelo <strong>dimensional</strong> organiza y optimiza el dato para análisis; el modelo <strong>semántico</strong> define un contrato estable para consumo de negocio. Se complementan, no se duplican.</div>
+    <div class="tab-hint">Seleccioná una capa para ver su función (clic, Enter o flechas arriba/abajo).</div>
+
+    <div class="tabs-layout">
+      <!-- Tabs -->
+      <div class="tab-list" role="tablist" aria-label="Capas de arquitectura">
+        <button class="tab-btn tc-src is-tab-active" type="button" role="tab" id="tab0" onclick="showPanel(0)" data-tab-index="0" aria-controls="p0" aria-selected="true">
+          <span class="tab-dot" style="background:var(--blue-light)"></span> Fuentes
+        </button>
+        <button class="tab-btn tc-stg" type="button" role="tab" id="tab1" onclick="showPanel(1)" data-tab-index="1" aria-controls="p1" aria-selected="false">
+          <span class="tab-dot" style="background:#D4AC0D"></span> Staging
+        </button>
+        <button class="tab-btn tc-rel" type="button" role="tab" id="tab2" onclick="showPanel(2)" data-tab-index="2" aria-controls="p2" aria-selected="false">
+          <span class="tab-dot" style="background:var(--green)"></span> Modelo Relacional
+        </button>
+        <button class="tab-btn tc-dim" type="button" role="tab" id="tab3" onclick="showPanel(3)" data-tab-index="3" aria-controls="p3" aria-selected="false">
+          <span class="tab-dot" style="background:#5C6BC0"></span> Modelo Dimensional
+        </button>
+        <button class="tab-btn tc-sem" type="button" role="tab" id="tab4" onclick="showPanel(4)" data-tab-index="4" aria-controls="p4" aria-selected="false">
+          <span class="tab-dot" style="background:var(--purple)"></span> Modelo Semántico
+        </button>
+        <button class="tab-btn tc-rep" type="button" role="tab" id="tab5" onclick="showPanel(5)" data-tab-index="5" aria-controls="p5" aria-selected="false">
+          <span class="tab-dot" style="background:#43A047"></span> Reportes
+        </button>
+      </div>
+
+      <!-- Panels -->
+      <div style="position:relative;">
+        <div class="panel is-panel-active" id="p0" role="tabpanel" aria-labelledby="tab0" aria-hidden="false">
+          <div class="ph"><span class="ph-icon">🗄️</span><span class="ph-title">Fuentes de datos</span></div>
+          <div class="ps"><div class="ps-label">Qué es</div>
+            <p>El origen de todos los datos: bases SQL Server, archivos planos, sistemas transaccionales y cualquier otra fuente del banco.</p></div>
+          <div class="ps"><div class="ps-label">Por qué importa</div>
+            <p>La arquitectura respeta las fuentes sin modificarlas. Esto garantiza que siempre se pueda rastrear cada dato hasta su origen — trazabilidad completa.</p></div>
+          <div class="tags">
+            <span class="tag" style="background:#EBF8FF;color:var(--blue-dark)">SQL Server</span>
+            <span class="tag" style="background:#EBF8FF;color:var(--blue-dark)">Archivos planos</span>
+            <span class="tag" style="background:#EBF8FF;color:var(--blue-dark)">On-premise</span>
+          </div>
+        </div>
+
+        <div class="panel" id="p1" role="tabpanel" aria-labelledby="tab1" aria-hidden="true">
+          <div class="ph"><span class="ph-icon">📥</span><span class="ph-title">Staging — Capa de ingesta</span></div>
+          <div class="ps"><div class="ps-label">Qué hace</div>
+            <p>Realiza una réplica cruda de los datos sin aplicar transformaciones de negocio. Es una zona de aterrizaje controlada que recibe y registra exactamente lo que llegó.</p></div>
+          <div class="ps"><div class="ps-label">Qué problema resuelve</div>
+            <p>Desacopla las fuentes del procesamiento. Si una fuente cambia o falla, el impacto queda contenido en esta capa y no se propaga al resto de la arquitectura.</p></div>
+          <div class="ps"><div class="ps-label">Analogía de negocio</div>
+            <p>Es la zona de recepción de documentos: los registra tal cual llegan antes de procesarlos. Nada entra al sistema sin pasar por este punto de control.</p></div>
+        </div>
+
+        <div class="panel" id="p2" role="tabpanel" aria-labelledby="tab2" aria-hidden="true">
+          <div class="ph"><span class="ph-icon">🔗</span><span class="ph-title">Modelo Relacional Consolidado</span></div>
+          <div class="ps"><div class="ps-label">Qué hace</div>
+            <p>Integra y consolida los datos de múltiples fuentes en un modelo normalizado. Resuelve duplicados, conflictos e inconsistencias entre sistemas.</p></div>
+          <div class="ps"><div class="ps-label">Por qué es clave</div>
+            <p>Establece la <strong>única fuente de verdad</strong> del negocio. La lógica de integración se define una sola vez y se reutiliza en todas las capas superiores. Fin de las interpretaciones divergentes.</p></div>
+          <div class="tags">
+            <span class="tag" style="background:#E8F8F4;color:#00695C">Normalización</span>
+            <span class="tag" style="background:#E8F8F4;color:#00695C">Integración</span>
+            <span class="tag" style="background:#E8F8F4;color:#00695C">Fuente única de verdad</span>
+          </div>
+        </div>
+
+        <div class="panel" id="p3" role="tabpanel" aria-labelledby="tab3" aria-hidden="true">
+          <div class="ph"><span class="ph-icon">📐</span><span class="ph-title">Modelo Dimensional</span></div>
+          <div class="ps"><div class="ps-label">Qué hace</div>
+            <p>Organiza la información en hechos y dimensiones para el análisis. Preserva la granularidad, el historial y la consistencia. Es la base analítica reutilizable de la arquitectura.</p></div>
+          <div class="ps"><div class="ps-label">Por qué es necesario</div>
+            <p>Permite que múltiples reportes consuman la misma estructura sin reinterpretar la lógica. Optimizado para consultas analíticas: Power BI y SAS rinden mejor sobre este modelo.</p></div>
+          <div class="ps"><div class="ps-label">¿Compite con el modelo semántico?</div>
+            <p>No. Se complementan: el dimensional organiza y optimiza el dato; el semántico lo expone con gobernanza. Capas distintas, roles distintos.</p></div>
+        </div>
+
+        <div class="panel" id="p4" role="tabpanel" aria-labelledby="tab4" aria-hidden="true">
+          <div class="ph"><span class="ph-icon">🧭</span><span class="ph-title">Modelo Semántico</span></div>
+          <div class="ps"><div class="ps-label">Qué hace</div>
+            <p>Actúa como el contrato de consumo entre el dato técnico y los analistas. Expone la información de forma simplificada, estable y gobernada, con términos del negocio.</p></div>
+          <div class="ps"><div class="ps-label">Por qué es clave para la gerencia</div>
+            <p>Evita que cada reporte reinterprete la lógica de negocio. Reduce errores, facilita el onboarding y garantiza que todos los reportes hablen del mismo lenguaje de datos.</p></div>
+          <div class="tags">
+            <span class="tag" style="background:#F3E5FF;color:var(--purple)">Gobernanza</span>
+            <span class="tag" style="background:#F3E5FF;color:var(--purple)">Contrato de consumo</span>
+            <span class="tag" style="background:#F3E5FF;color:var(--purple)">Power BI · SAS</span>
+          </div>
+        </div>
+
+        <div class="panel" id="p5" role="tabpanel" aria-labelledby="tab5" aria-hidden="true">
+          <div class="ph"><span class="ph-icon">📊</span><span class="ph-title">Reportes y análisis</span></div>
+          <div class="ps"><div class="ps-label">Qué hace</div>
+            <p>Dashboards en Power BI y análisis en SAS que consumen directamente del modelo semántico, con datos listos, gobernados y consistentes.</p></div>
+          <div class="ps"><div class="ps-label">Qué cambia vs. hoy</div>
+            <p>Los reportes ya no definen su propia lógica de negocio. Consumen un contrato estable y validado: mismos datos, mismas definiciones, sin sorpresas.</p></div>
+          <div class="tags">
+            <span class="tag" style="background:#E8F5E9;color:#2E7D32">Power BI</span>
+            <span class="tag" style="background:#E8F5E9;color:#2E7D32">SAS</span>
+            <span class="tag" style="background:#E8F5E9;color:#2E7D32">Self-service analytics</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     SLIDE 6 — ANTES VS DESPUÉS
+================================================================ -->
+<section class="slide" id="s6" data-dark="false">
+  <div class="slide-inner">
+    <div class="slide-header">
+      <div class="slide-title">Antes y después</div>
+      <div class="slide-sub">El impacto concreto en la operación diaria de la gerencia</div>
+    </div>
+
+    <div class="vs-grid">
+      <div class="vc before">
+        <div class="vc-title">✗ &nbsp;Esquema actual</div>
+        <div class="vc-row"><span class="vbadge">✗</span>Cada ETL define su propia lógica de negocio de forma independiente</div>
+        <div class="vc-row"><span class="vbadge">✗</span>Un mismo indicador puede arrojar valores distintos según el reporte consultado</div>
+        <div class="vc-row"><span class="vbadge">✗</span>Nuevo requerimiento = nuevo ETL desde cero, sin reutilizar nada existente</div>
+        <div class="vc-row"><span class="vbadge">✗</span>Sin trazabilidad: difícil saber de dónde proviene un dato y cuándo cambió</div>
+        <div class="vc-row"><span class="vbadge">✗</span>Un cambio en fuentes puede romper múltiples reportes de forma imprevisible</div>
+        <div class="vc-row"><span class="vbadge">✗</span>Conocimiento concentrado: alta dependencia de personas clave</div>
+        <div class="vc-row"><span class="vbadge">✗</span>Performance limitada por consultas sobre bases no optimizadas para análisis</div>
+      </div>
+
+      <div class="vs-mid"><div class="vs-circle">VS</div></div>
+
+      <div class="vc after">
+        <div class="vc-title">✓ &nbsp;Arquitectura propuesta</div>
+        <div class="vc-row"><span class="vbadge">✓</span>Lógica definida una vez en el modelo relacional, reutilizada en todos los reportes</div>
+        <div class="vc-row"><span class="vbadge">✓</span>Un único dato, una única definición: consistencia garantizada entre todos los reportes</div>
+        <div class="vc-row"><span class="vbadge">✓</span>Nuevos reportes se construyen sobre capas existentes — sin reescribir lógica</div>
+        <div class="vc-row"><span class="vbadge">✓</span>Trazabilidad completa: cada dato tiene origen conocido y documentado</div>
+        <div class="vc-row"><span class="vbadge">✓</span>Cambios en fuentes quedan aislados en Staging — no se propagan hacia arriba</div>
+        <div class="vc-row"><span class="vbadge">✓</span>Arquitectura documentada y transferible a cualquier integrante del equipo</div>
+        <div class="vc-row"><span class="vbadge">✓</span>Modelo dimensional optimizado para consultas analíticas de alta performance</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     SLIDE 7 — BENEFICIOS
+================================================================ -->
+<section class="slide" id="s7" data-dark="false">
+  <div class="slide-inner">
+    <div class="slide-header">
+      <div class="slide-title">Beneficios concretos</div>
+      <div class="slide-sub">Lo que la gerencia gana con esta arquitectura</div>
+    </div>
+
+    <div class="ben-grid stagger">
+      <div class="ben-card">
+        <div class="ben-icon">🏛️</div>
+        <div class="ben-title">Gobernanza real del dato</div>
+        <div class="ben-desc">Estándares, definiciones y lógica de negocio centralizados. El dato tiene dueño, reglas claras y trazabilidad completa.</div>
+      </div>
+      <div class="ben-card">
+        <div class="ben-icon">✅</div>
+        <div class="ben-title">Fuente única de verdad</div>
+        <div class="ben-desc">Un solo lugar donde vive la lógica. Todos los reportes hablan de los mismos números, sin interpretaciones divergentes.</div>
+      </div>
+      <div class="ben-card">
+        <div class="ben-icon">⚡</div>
+        <div class="ben-title">Mayor agilidad operativa</div>
+        <div class="ben-desc">Nuevos reportes o análisis se construyen sobre capas existentes. Menos tiempo desde el requerimiento hasta el entregable.</div>
+      </div>
+      <div class="ben-card">
+        <div class="ben-icon">📈</div>
+        <div class="ben-title">Escalabilidad ordenada</div>
+        <div class="ben-desc">Nuevos dominios de riesgo se incorporan siguiendo la misma arquitectura. Sin silos, sin duplicación, sin deuda técnica acumulada.</div>
+      </div>
+      <div class="ben-card">
+        <div class="ben-icon">🔧</div>
+        <div class="ben-title">Mantenibilidad</div>
+        <div class="ben-desc">Arquitectura documentada y estructurada. Cada cambio tiene un lugar claro donde aplicarse, sin efectos secundarios inesperados.</div>
+      </div>
+      <div class="ben-card">
+        <div class="ben-icon">🚀</div>
+        <div class="ben-title">Performance analítica</div>
+        <div class="ben-desc">Modelo dimensional y semántico optimizados para consultas. Power BI y SAS rinden significativamente mejor sobre esta base.</div>
+      </div>
+    </div>
+
+    <div class="kpi-strip">
+      <div class="kpi-item"><span class="k-label">Indicador de éxito</span><span class="k-value">Menor tiempo para entregar nuevos reportes de riesgo</span></div>
+      <div class="kpi-item"><span class="k-label">Indicador de éxito</span><span class="k-value">Mayor consistencia entre reportes regulatorios y de gestión</span></div>
+      <div class="kpi-item"><span class="k-label">Indicador de éxito</span><span class="k-value">Trazabilidad punta a punta del dato crítico</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     SLIDE 8 — ROADMAP
+================================================================ -->
+<section class="slide" id="s8" data-dark="false">
+  <div class="slide-inner">
+    <div class="slide-header">
+      <div class="slide-title">Plan de implementación</div>
+      <div class="slide-sub">Cuatro fases incrementales — cada una entrega valor por sí sola, sin esperar a la siguiente</div>
+    </div>
+
+    <div class="timeline">
+      <div class="phase">
+        <div class="ph-circle pc1">📥</div>
+        <div class="ph-num">Fase 1</div>
+        <div class="ph-name">Staging & Ingesta</div>
+        <div class="ph-dur">2 – 3 meses</div>
+        <ul class="ph-tasks">
+          <li>Relevamiento y mapeo de fuentes actuales</li>
+          <li>Diseño e implementación de la capa de staging</li>
+          <li>Procesos de ingesta desacoplados por fuente</li>
+          <li>Monitoreo y alertas de ingesta</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <div class="ph-circle pc2">🔗</div>
+        <div class="ph-num">Fase 2</div>
+        <div class="ph-name">Modelo Relacional</div>
+        <div class="ph-dur">2 – 3 meses</div>
+        <ul class="ph-tasks">
+          <li>Modelado de datos consolidado</li>
+          <li>Reglas de integración y deduplicación</li>
+          <li>Definición de la fuente única de verdad</li>
+          <li>Documentación y catálogo del modelo</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <div class="ph-circle pc3">📐</div>
+        <div class="ph-num">Fase 3</div>
+        <div class="ph-name">Modelo Dimensional</div>
+        <div class="ph-dur">2 – 3 meses</div>
+        <ul class="ph-tasks">
+          <li>Diseño de hechos y dimensiones</li>
+          <li>Carga histórica inicial</li>
+          <li>Optimización para consultas analíticas</li>
+          <li>Validación con áreas de negocio</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <div class="ph-circle pc4">🧭</div>
+        <div class="ph-num">Fase 4</div>
+        <div class="ph-name">Semántico + Reportes</div>
+        <div class="ph-dur">2 – 3 meses</div>
+        <ul class="ph-tasks">
+          <li>Construcción del modelo semántico</li>
+          <li>Migración progresiva de reportes Power BI</li>
+          <li>Adaptación de análisis SAS</li>
+          <li>Capacitación a usuarios de negocio</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="rd-note">
+      💡 <strong>Enfoque incremental:</strong> la Fase 1 ya mejora la trazabilidad y estabilidad de los datos. Los reportes pueden empezar a consumir mejoras desde la Fase 2, sin esperar a completar toda la arquitectura.
+    </div>
+    <div class="rd-note decision">
+      🧭 <strong>Decisión requerida:</strong> aprobar la ejecución de Fase 1 y Fase 2 como primer bloque para capturar valor operativo temprano y reducir riesgo regulatorio.
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     SLIDE 9 — CIERRE
+================================================================ -->
+<section class="slide" id="s9" data-dark="true">
+  <div class="deco deco-1"></div>
+  <div class="deco deco-2"></div>
+  <div class="cl-tag">Control de Riesgos — Ingeniería de Datos</div>
+  <h2>Una arquitectura que le da confianza a cada número que aparece en un reporte</h2>
+  <p class="cl-body">Gobernanza, trazabilidad y consistencia no son conceptos técnicos: son la base sobre la que se toman decisiones de riesgo. Esta arquitectura los hace realidad.</p>
+  <div class="cl-cta">¿Preguntas?</div>
+</section>
+
+<script>
+  /* =============================================
+     SLIDE ENGINE
+  ============================================= */
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total  = slides.length;
+  let cur = 0;
+  let isTransitioning = false;
+
+  document.getElementById('tot').textContent = total;
+
+  // Build dots
+  const dotsEl = document.getElementById('dots');
+  slides.forEach((slide, i) => {
+    const d = document.createElement('button');
+    d.type = 'button';
+    d.className = 'dot' + (i === 0 ? ' is-active' : '');
+    d.setAttribute('aria-label', `Ir al slide ${i + 1}: ${slide.id.toUpperCase()}`);
+    d.setAttribute('aria-current', i === 0 ? 'true' : 'false');
+    d.addEventListener('click', () => goTo(i));
+    dotsEl.appendChild(d);
+  });
+
+  function updateChrome() {
+    document.getElementById('cur').textContent = cur + 1;
+    document.querySelectorAll('.dot').forEach((d, i) => {
+      const active = i === cur;
+      d.classList.toggle('is-active', active);
+      d.setAttribute('aria-current', active ? 'true' : 'false');
+    });
+    document.getElementById('btn-prev').disabled = cur === 0;
+    document.getElementById('btn-next').disabled = cur === total - 1;
+    document.getElementById('progress-fill').style.width = `${((cur + 1) / total) * 100}%`;
+
+    // Dark chrome?
+    const dark = slides[cur].dataset.dark === 'true';
+    document.body.classList.toggle('dark-chrome', dark);
+
+    // Sync URL hash for easy resume/share
+    const hash = `#${slides[cur].id}`;
+    if (window.location.hash !== hash) {
+      history.replaceState(null, '', hash);
+    }
+  }
+
+  function goTo(next) {
+    if (next < 0 || next >= total || next === cur || isTransitioning) return;
+    isTransitioning = true;
+
+    const fwd = next > cur;
+    const prev = slides[cur];
+    const dest = slides[next];
+
+    // Stage destination off-screen instantly (no transition)
+    dest.style.transition = 'none';
+    dest.style.transform  = fwd ? 'translateX(48px)' : 'translateX(-48px)';
+    dest.style.opacity    = '0';
+
+    // Tick: re-enable transition and animate
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      dest.style.transition = '';
+      dest.style.transform  = '';
+      dest.style.opacity    = '';
+
+      prev.classList.remove('is-active');
+      prev.style.transition = '';
+      prev.style.transform  = fwd ? 'translateX(-48px)' : 'translateX(48px)';
+      prev.style.opacity    = '0';
+
+      dest.classList.add('is-active');
+    }));
+
+    // Clean up prev after transition
+    setTimeout(() => {
+      prev.style.transform = '';
+      prev.style.opacity   = '';
+      isTransitioning = false;
+    }, 480);
+
+    cur = next;
+    updateChrome();
+  }
+
+  function go(dir) { goTo(cur + dir); }
+
+  document.addEventListener('keydown', e => {
+    const inFormElement = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(e.target.tagName);
+    const allowsDeckHotkeys = e.target.classList.contains('tab-btn') || e.target.classList.contains('nav-btn') || e.target.classList.contains('dot');
+    if (inFormElement && !allowsDeckHotkeys) return;
+
+    const panel = e.target.closest('#s5 .panel');
+    if (panel && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) return;
+
+    if (['ArrowRight', 'ArrowDown', ' '].includes(e.key)) { e.preventDefault(); go(1); }
+    if (['ArrowLeft',  'ArrowUp'       ].includes(e.key)) { e.preventDefault(); go(-1); }
+    if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+    if (e.key === 'End')  { e.preventDefault(); goTo(total - 1); }
+  });
+
+  // Start from hash if available
+  const hashIndex = slides.findIndex(s => `#${s.id}` === window.location.hash);
+  if (hashIndex >= 0) {
+    slides[0].classList.remove('is-active');
+    slides[hashIndex].classList.add('is-active');
+    cur = hashIndex;
+  }
+
+  updateChrome();
+
+  /* =============================================
+     LAYER TABS (Slide 5)
+  ============================================= */
+  function showPanel(i) {
+    document.querySelectorAll('#s5 .tab-btn').forEach((b, j) => {
+      const active = j === i;
+      b.classList.toggle('is-tab-active', active);
+      b.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    document.querySelectorAll('#s5 .panel').forEach((p, j) => {
+      const active = j === i;
+      p.classList.toggle('is-panel-active', active);
+      p.setAttribute('aria-hidden', active ? 'false' : 'true');
+    });
+  }
+
+  const tabButtons = Array.from(document.querySelectorAll('#s5 .tab-btn'));
+  tabButtons.forEach((btn, index) => {
+    btn.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const next = (index + 1) % tabButtons.length;
+        showPanel(next);
+        tabButtons[next].focus();
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const prev = (index - 1 + tabButtons.length) % tabButtons.length;
+        showPanel(prev);
+        tabButtons[prev].focus();
+      }
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        showPanel(index);
+      }
+    });
+  });
+</script>
+</body>
+</html>

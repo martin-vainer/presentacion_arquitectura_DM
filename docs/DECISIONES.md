@@ -40,3 +40,13 @@
 - **Decisión**: Se reemplazó el texto “Logrando lo siguiente” por una frase más directa (“Con esta arquitectura, la gerencia logra resultados concretos”), se agregaron viñetas visuales a la lista y se eliminó “¿Preguntas?” del cierre.
 - **Por qué**: Se buscó un final más elegante, con mejor jerarquía visual y tono ejecutivo orientado a resultado.
 - **Impacto**: Copy ejecutivo + jerarquía visual (slide 9).
+
+### 2026-04-07 — Slide 8 convertida a línea de tiempo interactiva
+- **Decisión**: Se reemplazó la grilla estática de iteraciones por una línea de tiempo interactiva con hitos seleccionables y panel de detalle dinámico.
+- **Por qué**: Mejora comprensión secuencial del plan iterativo y permite enfatizar cada entrega productiva sin sobrecargar visualmente.
+- **Impacto**: Interacción + narrativa de implementación (slide 8).
+
+### 2026-04-07 — Uso de skill frontend-design con criterio ejecutivo
+- **Decisión**: Se aplicaron patrones de refinamiento visual de la skill (jerarquía tipográfica, foco visual y microinteracción útil), pero evitando una estética disruptiva o “marketinera”.
+- **Por qué**: El proyecto exige tono sobrio/gerencial; se priorizó claridad ejecutiva sobre impacto visual decorativo.
+- **Impacto**: Dirección estética transversal (principalmente slide 8).

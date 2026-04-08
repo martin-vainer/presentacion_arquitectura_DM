@@ -137,7 +137,8 @@
 
     .dot:focus-visible,
     .nav-btn:focus-visible,
-    #s5 .tab-btn:focus-visible {
+    #s5 .tab-btn:focus-visible,
+    #s8 .iter-step:focus-visible {
       outline: 3px solid var(--focus-ring);
       outline-offset: 2px;
     }
@@ -574,75 +575,137 @@
     /* =====================================================
        SLIDE 8 — ROADMAP
     ===================================================== */
-    #s8 .iter-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 14px;
-      margin-top: 24px;
-      margin-bottom: 20px;
-    }
-
-    #s8 .iter {
-      background: var(--white);
+    #s8 .iter-timeline {
+      margin-top: 22px;
+      margin-bottom: 16px;
+      padding: 14px 12px 4px;
       border-radius: 12px;
+      background: var(--white);
       box-shadow: var(--shadow);
-      border-top: 4px solid var(--blue-light);
-      padding: 16px 16px 14px;
-      min-height: 290px;
     }
-    #s8 .iter.i1 { border-top-color: var(--blue-light); }
-    #s8 .iter.i2 { border-top-color: var(--green); }
-    #s8 .iter.i3 { border-top-color: var(--purple); }
 
-    #s8 .iter-top {
+    #s8 .iter-track {
+      position: relative;
+      height: 4px;
+      border-radius: 999px;
+      background: #DFE8F1;
+      margin: 18px 30px 32px;
+    }
+
+    #s8 .iter-progress {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--blue-light), var(--green), var(--purple));
+      transition: width 0.28s ease;
+    }
+
+    #s8 .iter-steps {
+      margin-top: -16px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    #s8 .iter-step {
+      border: none;
+      background: transparent;
+      padding: 0 8px 10px;
+      text-align: center;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+
+    #s8 .iter-step-dot {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      margin: 0 auto 8px;
       display: flex;
       align-items: center;
-      gap: 9px;
-      margin-bottom: 8px;
-    }
-    #s8 .iter-dot {
-      width: 26px; height: 26px;
-      border-radius: 50%;
-      display: inline-flex;
-      align-items: center;
       justify-content: center;
-      color: #fff;
       font-size: 12px;
       font-weight: 700;
-      flex-shrink: 0;
+      border: 2px solid #C7D3DE;
+      background: #fff;
+      transition: transform 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     }
-    #s8 .i1 .iter-dot { background: var(--blue-light); }
-    #s8 .i2 .iter-dot { background: var(--green); }
-    #s8 .i3 .iter-dot { background: var(--purple); }
 
-    #s8 .iter-num {
+    #s8 .iter-step-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    #s8 .iter-step-name {
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--text-muted);
+    }
+
+    #s8 .iter-step.is-active .iter-step-dot {
+      border-color: var(--blue-light);
+      color: var(--blue-dark);
+      transform: scale(1.06);
+    }
+    #s8 .iter-step.is-active .iter-step-label,
+    #s8 .iter-step.is-active .iter-step-name {
+      color: var(--text);
+    }
+
+    #s8 .iter-panel {
+      background: var(--white);
+      border-radius: 12px;
+      border-top: 4px solid var(--blue-light);
+      box-shadow: var(--shadow);
+      padding: 16px 18px 14px;
+      min-height: 220px;
+    }
+
+    #s8 .iter-kicker {
       font-size: 10px;
       font-weight: 700;
-      text-transform: uppercase;
       letter-spacing: 1px;
+      text-transform: uppercase;
       color: var(--text-muted);
-    }
-    #s8 .iter-name {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--text);
       margin-bottom: 6px;
     }
-    #s8 .iter-focus {
-      font-size: 12px;
+    #s8 .iter-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    #s8 .iter-copy {
+      font-size: 13px;
       color: var(--text-muted);
-      line-height: 1.5;
+      line-height: 1.55;
       margin-bottom: 10px;
     }
-
-    #s8 .iter-tasks { list-style: none; }
+    #s8 .iter-tasks {
+      list-style: none;
+    }
     #s8 .iter-tasks li {
-      font-size: 12px; color: var(--text-muted); line-height: 1.45;
-      padding: 4px 0; border-bottom: 1px solid #F0F0F0;
-      display: flex; align-items: flex-start; gap: 5px;
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.45;
+      padding: 5px 0;
+      border-bottom: 1px solid #F0F0F0;
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
     }
     #s8 .iter-tasks li:last-child { border-bottom: none; }
-    #s8 .iter-tasks li::before { content: '›'; color: var(--blue-light); flex-shrink: 0; font-size: 13px; line-height: 1.3; }
+    #s8 .iter-tasks li::before {
+      content: '>';
+      color: var(--blue-light);
+      flex-shrink: 0;
+      font-size: 13px;
+      line-height: 1.3;
+    }
 
     #s8 .rd-note {
       background: var(--white);
@@ -726,7 +789,7 @@
       #s1 { padding-left: 76px; }
       #s1 h1 { font-size: 40px; }
       #s5 .tabs-layout { height: 360px; grid-template-columns: 185px 1fr; }
-      #s8 .iter-grid { margin-top: 16px; }
+      #s8 .iter-timeline { margin-top: 16px; }
     }
 
     @media (max-width: 1180px) {
@@ -737,17 +800,16 @@
         grid-template-columns: repeat(2, 1fr);
       }
 
-      #s8 .iter-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
+      #s8 .iter-steps { gap: 4px; }
+      #s8 .iter-step { padding-left: 4px; padding-right: 4px; }
       #s6 .vs-grid { grid-template-columns: 1fr; gap: 12px; }
       #s6 .vs-mid { order: -1; }
     }
 
     @media (max-width: 860px) {
-      #s8 .iter-grid {
-        grid-template-columns: 1fr;
-      }
+      #s8 .iter-steps { grid-template-columns: 1fr; margin-top: 8px; }
+      #s8 .iter-track { display: none; }
+      #s8 .iter-panel { min-height: 0; }
     }
   </style>
 </head>
@@ -1221,54 +1283,49 @@
       <div class="slide-title">Implementación ágil por iteraciones</div>
       <div class="slide-sub">Sin fases rígidas: cada iteración amplía datos/modelos y entrega reportes productivos</div>
     </div>
-
-    <div class="iter-grid">
-      <div class="iter i1">
-        <div class="iter-top">
-          <span class="iter-dot">1</span>
-          <span class="iter-num">Iteración inicial</span>
-        </div>
-        <div class="iter-name">Primer alcance productivo</div>
-        <div class="iter-focus">Se consolida captura + trazabilidad y se publica el primer caso de uso operativo.</div>
-        <ul class="iter-tasks">
-          <li><strong>TC - Comportamiento: Seguimiento de tarjetas</strong></li>
-          <li>Registro de linaje de datos y reglas de transformación</li>
-          <li>Documentación funcional y técnica del flujo implementado</li>
-        </ul>
+    <div class="iter-timeline">
+      <div class="iter-track">
+        <div class="iter-progress" id="iter-progress"></div>
       </div>
 
-      <div class="iter i2">
-        <div class="iter-top">
-          <span class="iter-dot">2</span>
-          <span class="iter-num">Próximas iteraciones</span>
-        </div>
-        <div class="iter-name">Ampliación de cobertura de negocio</div>
-        <div class="iter-focus">Sobre la misma arquitectura se agregan nuevos datos, modelos y reportes productivos.</div>
-        <ul class="iter-tasks">
-          <li>informe de seguimiento de préstamos</li>
-          <li>base consolidada de solicitudes</li>
-          <li>actualización de metadatos y catálogo de negocio</li>
-        </ul>
-      </div>
-
-      <div class="iter i3">
-        <div class="iter-top">
-          <span class="iter-dot">3</span>
-          <span class="iter-num">Escala continua</span>
-        </div>
-        <div class="iter-name">Evolución controlada del DATAMART</div>
-        <div class="iter-focus">El equipo repite el mismo patrón para nuevos dominios y reportes, entre otros.</div>
-        <ul class="iter-tasks">
-          <li>nuevos datasets y modelos reutilizando SSOT</li>
-          <li>nuevos reportes de negocio en producción, entre otros</li>
-          <li>mejora continua de performance, trazabilidad y mantenibilidad</li>
-        </ul>
+      <div class="iter-steps" role="tablist" aria-label="Iteraciones del DATAMART">
+        <button class="iter-step is-active" id="iter-step-0" data-iter-index="0" role="tab" aria-selected="true" type="button">
+          <span class="iter-step-dot">1</span>
+          <span class="iter-step-label">Iteración inicial</span>
+          <span class="iter-step-name">Primer alcance productivo</span>
+        </button>
+        <button class="iter-step" id="iter-step-1" data-iter-index="1" role="tab" aria-selected="false" type="button">
+          <span class="iter-step-dot">2</span>
+          <span class="iter-step-label">Próximas iteraciones</span>
+          <span class="iter-step-name">Ampliación de cobertura</span>
+        </button>
+        <button class="iter-step" id="iter-step-2" data-iter-index="2" role="tab" aria-selected="false" type="button">
+          <span class="iter-step-dot">3</span>
+          <span class="iter-step-label">Escala continua</span>
+          <span class="iter-step-name">Evolución controlada</span>
+        </button>
       </div>
     </div>
+
+    <div class="iter-panel" id="iter-panel" role="tabpanel" aria-live="polite">
+      <div class="iter-kicker" id="iter-kicker">Iteración inicial</div>
+      <div class="iter-title" id="iter-title">Primer alcance productivo</div>
+      <div class="iter-copy" id="iter-copy">Se consolida captura + trazabilidad y se publica el primer caso de uso operativo.</div>
+      <ul class="iter-tasks" id="iter-tasks">
+      <li><strong>TC - Comportamiento: Seguimiento de tarjetas</strong></li>
+      <li>Registro de linaje de datos y reglas de transformación</li>
+      <li>Documentación funcional y técnica del flujo implementado</li>
+      </ul>
+    </div>
+
+    <div style="margin-top: 9px;"></div>
 
     <div class="rd-note">
       💡 <strong>Clave de ejecución:</strong> cada iteración entrega valor operativo real y deja documentación + metadatos actualizados para la siguiente.
     </div>
+
+    <div style="margin-top: 9px;"></div>
+
     <div class="rd-note decision">
       🧭 <strong>Decisión requerida:</strong> sostener el enfoque iterativo del DATAMART y medir avance por reportes productivos entregados, no por hitos técnicos aislados.
     </div>
@@ -1471,6 +1528,97 @@
     row.addEventListener('mouseenter', () => highlightPair(pair, true));
     row.addEventListener('mouseleave', () => highlightPair(pair, false));
   });
+
+  /* =============================================
+     ITERATIVE TIMELINE (Slide 8)
+  ============================================= */
+  const iterationData = [
+    {
+      kicker: 'Iteración inicial',
+      title: 'Primer alcance productivo',
+      copy: 'Se consolida captura + trazabilidad y se publica el primer caso de uso operativo.',
+      items: [
+        '<strong>TC - Comportamiento: Seguimiento de tarjetas</strong>',
+        'Registro de linaje de datos y reglas de transformación',
+        'Documentación funcional y técnica del flujo implementado'
+      ],
+      color: 'var(--blue-light)'
+    },
+    {
+      kicker: 'Próximas iteraciones',
+      title: 'Ampliación de cobertura de negocio',
+      copy: 'Sobre la misma arquitectura se agregan nuevos datos, modelos y reportes productivos.',
+      items: [
+        'informe de seguimiento de préstamos',
+        'base consolidada de solicitudes',
+        'actualización de metadatos y catálogo de negocio'
+      ],
+      color: 'var(--green)'
+    },
+    {
+      kicker: 'Escala continua',
+      title: 'Evolución controlada del DATAMART',
+      copy: 'El equipo repite el mismo patrón para nuevos dominios y reportes, entre otros.',
+      items: [
+        'nuevos datasets y modelos reutilizando SSOT',
+        'nuevos reportes de negocio en producción, entre otros',
+        'mejora continua de performance, trazabilidad y mantenibilidad'
+      ],
+      color: 'var(--purple)'
+    }
+  ];
+
+  const iterSteps = Array.from(document.querySelectorAll('#s8 .iter-step'));
+  const iterProgress = document.getElementById('iter-progress');
+  const iterKicker = document.getElementById('iter-kicker');
+  const iterTitle = document.getElementById('iter-title');
+  const iterCopy = document.getElementById('iter-copy');
+  const iterTasks = document.getElementById('iter-tasks');
+  const iterPanel = document.getElementById('iter-panel');
+  let activeIteration = 0;
+
+  function renderIteration(index) {
+    const safeIndex = Math.max(0, Math.min(index, iterationData.length - 1));
+    const data = iterationData[safeIndex];
+    activeIteration = safeIndex;
+
+    iterKicker.textContent = data.kicker;
+    iterTitle.textContent = data.title;
+    iterCopy.textContent = data.copy;
+    iterTasks.innerHTML = data.items.map(item => `<li>${item}</li>`).join('');
+    iterPanel.style.borderTopColor = data.color;
+    iterProgress.style.width = `${(safeIndex / (iterationData.length - 1)) * 100}%`;
+
+    iterSteps.forEach((step, i) => {
+      const active = i === safeIndex;
+      step.classList.toggle('is-active', active);
+      step.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+  }
+
+  iterSteps.forEach((step, i) => {
+    step.addEventListener('click', () => renderIteration(i));
+    step.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        const next = (i + 1) % iterSteps.length;
+        renderIteration(next);
+        iterSteps[next].focus();
+      }
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const prev = (i - 1 + iterSteps.length) % iterSteps.length;
+        renderIteration(prev);
+        iterSteps[prev].focus();
+      }
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        renderIteration(i);
+      }
+    });
+  });
+
+  renderIteration(activeIteration);
 </script>
 </body>
 </html>

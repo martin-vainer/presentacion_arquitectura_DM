@@ -1,0 +1,523 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agente Analítico de Control de Riesgo</title>
+  <!--
+    Nota técnica para revisión:
+    Microsoft anunció Microsoft Agent Framework 1.0 como production-ready el 2026-04-03.
+    Algunas páginas de Microsoft Learn pueden conservar notas de preview para partes del ecosistema.
+    Confirmar versión aprobada, modelos disponibles, políticas de datos hacia LLMs y patrón de despliegue corporativo antes de iniciar desarrollo.
+    Power BI Execute Queries REST API ejecuta DAX contra semantic models/datasets, pero Service Principal tiene restricciones relevantes con RLS/SSO.
+    Semantic Link / SemPy está soportado dentro de Microsoft Fabric; para un backend externo se propone Power BI REST API y se deja XMLA como alternativa futura.
+  -->
+  <style>
+    :root {
+      --bg: #F5F7FA;
+      --surface: #FFFFFF;
+      --muted-surface: #F5F7FA;
+      --ink: #101820;
+      --soft: #334155;
+      --muted: #64748b;
+      --line: #DDE6EF;
+      --navy: #005BAA;
+      --navy-2: #00AEEF;
+      --teal: #00B08D;
+      --teal-soft: #E7F8F4;
+      --accent: #F37053;
+      --accent-soft: #FFF0EC;
+      --shadow: 0 24px 70px rgba(16, 24, 32, .10);
+      --focus: 0 0 0 4px rgba(0, 176, 141, .20);
+      --sidebar: 292px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body {
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, rgba(216,224,232,.34) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(216,224,232,.26) 1px, transparent 1px),
+        var(--bg);
+      background-size: 76px 76px;
+      font-family: Aptos, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    button { font: inherit; }
+    .progress { position: fixed; inset: 0 0 auto; height: 4px; background: #DDE6EF; z-index: 50; }
+    .progress-bar { width: 6.25%; height: 100%; background: linear-gradient(90deg, var(--navy), var(--teal)); transition: width .28s ease; }
+    .shell { display: grid; grid-template-columns: var(--sidebar) minmax(0, 1fr); min-height: 100vh; }
+
+    .sidebar {
+      display: flex; flex-direction: column; gap: 20px;
+      padding: 30px 20px 24px;
+      border-right: 1px solid var(--line);
+      background: rgba(255,255,255,.88);
+      backdrop-filter: blur(18px);
+    }
+    .brand { padding: 8px 10px 12px; }
+    .brand small, .kicker {
+      color: var(--teal); font-weight: 800; letter-spacing: .14em;
+      text-transform: uppercase; font-size: 11px;
+    }
+    .brand h1 { margin: 8px 0 0; color: var(--navy); font-size: 19px; line-height: 1.15; letter-spacing: -.03em; }
+    .nav { display: grid; gap: 4px; overflow-y: auto; padding-right: 4px; scrollbar-width: thin; }
+    .nav button {
+      display: grid; grid-template-columns: 32px 1fr; gap: 8px; align-items: center;
+      min-height: 38px; padding: 7px 8px; border: 1px solid transparent;
+      border-radius: 12px; color: var(--muted); background: transparent;
+      text-align: left; cursor: pointer; transition: .18s ease;
+    }
+    .nav button:hover { background: var(--muted-surface); color: var(--navy); }
+    .nav button.active { background: #EAF4FC; color: var(--navy); border-color: rgba(0,91,170,.12); transform: translateX(2px); }
+    .num {
+      display: grid; place-items: center; width: 28px; height: 28px; border-radius: 999px;
+      background: #EAF4FC; color: var(--navy); font-weight: 850; font-size: 12px;
+    }
+    .nav button.active .num { color: #FFFFFF; background: var(--teal); }
+    .label { font-size: 12.5px; line-height: 1.15; font-weight: 700; }
+    .side-note { margin-top: auto; padding: 14px 10px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; line-height: 1.45; }
+
+    .stage { position: relative; height: 100vh; padding: 34px 42px 38px; }
+    .slide {
+      position: absolute; inset: 34px 42px 38px;
+      display: grid; align-items: center; pointer-events: none;
+      opacity: 0; transform: translateY(14px) scale(.992);
+      transition: opacity .32s ease, transform .32s ease;
+    }
+    .slide.active { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+    .frame {
+      width: min(100%, 1280px); max-height: calc(100vh - 72px); margin: 0 auto;
+      display: grid; grid-template-rows: auto minmax(0, 1fr);
+      overflow: hidden; border: 1px solid var(--line); border-radius: 26px;
+      background: rgba(255,255,255,.96); box-shadow: var(--shadow);
+    }
+    .frame.hero { min-height: calc(100vh - 72px); padding: 58px 62px; grid-template-rows: 1fr; }
+    .head { padding: 34px 42px 18px; }
+    .head h2 { margin: 8px 0 0; color: var(--navy); font-size: clamp(30px, 3.3vw, 48px); line-height: 1.02; letter-spacing: -.05em; }
+    .lead { margin: 12px 0 0; max-width: 900px; color: var(--soft); font-size: clamp(16px, 1.35vw, 21px); line-height: 1.45; }
+    .body { min-height: 0; overflow: auto; padding: 18px 42px 38px; }
+    .hero-grid { display: grid; grid-template-columns: 1.08fr .92fr; gap: 44px; align-items: center; }
+    .title {
+      margin: 14px 0 18px; color: var(--navy);
+      font-size: clamp(46px, 5.6vw, 76px); line-height: .96; letter-spacing: -.06em;
+    }
+    .tagline { margin: 0 0 34px; color: var(--soft); font-size: clamp(21px, 2vw, 29px); line-height: 1.34; letter-spacing: -.02em; }
+    .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .meta div, .card, .panel, .principle, .phase, .resource {
+      border: 1px solid var(--line); border-radius: 18px; background: var(--surface);
+      box-shadow: 0 10px 36px rgba(16, 24, 32, .06);
+    }
+    .meta div { padding: 16px 18px; }
+    .meta p { margin: 0; }
+    .meta .m-label { color: var(--muted); font-size: 11px; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
+    .meta .m-value { margin-top: 6px; color: var(--ink); font-size: 15px; font-weight: 750; }
+    .hero-panel { min-height: 420px; border-radius: 34px; background: linear-gradient(155deg, var(--navy), #005BAA 70%, var(--teal)); position: relative; overflow: hidden; }
+    .hero-panel:before, .hero-panel:after { content: ""; position: absolute; border-radius: 999px; border: 1px solid rgba(255,255,255,.18); }
+    .hero-panel:before { width: 330px; height: 330px; right: -90px; top: -90px; }
+    .hero-panel:after { width: 230px; height: 230px; left: -55px; bottom: -60px; }
+    .hero-node {
+      position: absolute; display: grid; place-items: center; width: 108px; height: 108px;
+      border: 1px solid rgba(255,255,255,.28); border-radius: 28px;
+      background: rgba(255,255,255,.12); color: #FFFFFF; text-align: center;
+      font-size: 13px; font-weight: 850; line-height: 1.18; backdrop-filter: blur(8px);
+    }
+    .hero-node.n1 { left: 48px; top: 86px; }
+    .hero-node.n2 { left: calc(50% - 54px); top: 158px; background: rgba(255,255,255,.20); }
+    .hero-node.n3 { right: 48px; bottom: 92px; }
+    .two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .grid-2-1 { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(310px, .65fr); gap: 22px; }
+    .card, .panel, .principle, .resource { padding: 22px; }
+    .card h3, .panel h3, .principle h3, .phase h3, .resource h3 { margin: 0 0 8px; color: var(--navy); font-size: 18px; line-height: 1.18; letter-spacing: -.02em; }
+    .card p, .panel p, .principle p, .phase p { margin: 0; color: var(--soft); font-size: 15px; line-height: 1.46; }
+    .accent { background: linear-gradient(180deg, #FFFFFF, var(--teal-soft)); border-color: rgba(0,176,141,.22); }
+    .warn { background: linear-gradient(180deg, #FFFFFF, var(--accent-soft)); border-color: rgba(243,112,83,.24); }
+    .bullets { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+    .bullets li { position: relative; padding-left: 18px; color: var(--soft); font-size: 14.5px; line-height: 1.42; }
+    .bullets li:before { content: ""; position: absolute; left: 0; top: .58em; width: 7px; height: 7px; border-radius: 999px; background: var(--teal); }
+    .query { padding: 13px 15px; border: 1px solid var(--line); border-left: 4px solid var(--teal); border-radius: 12px; background: #FFFFFF; color: var(--ink); font-size: 14px; line-height: 1.35; }
+    .queries { display: grid; gap: 10px; margin-top: 16px; }
+    .principles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .mark { display: inline-grid; place-items: center; width: 34px; height: 34px; margin-bottom: 13px; border-radius: 12px; background: var(--teal-soft); color: var(--teal); font-size: 13px; font-weight: 900; }
+    .diagram { padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(180deg, #FFFFFF, #F5F7FA); box-shadow: 0 10px 36px rgba(16,24,32,.06); overflow: hidden; }
+    svg { display: block; width: 100%; height: auto; }
+    .svg-title { fill: var(--navy); font-size: 15px; font-weight: 800; }
+    .svg-sub { fill: var(--muted); font-size: 11px; font-weight: 650; }
+    .box { fill: #FFFFFF; stroke: #DDE6EF; stroke-width: 1.4; }
+    .box-soft { fill: #E7F8F4; stroke: #00B08D; stroke-width: 1.4; }
+    .box-dark { fill: #005BAA; stroke: #005BAA; stroke-width: 1.4; }
+    .dark-text { fill: #FFFFFF; font-size: 13px; font-weight: 800; }
+    .arrow { stroke: #636E72; stroke-width: 1.8; fill: none; marker-end: url(#arrow); }
+    .arrow-t { stroke: var(--teal); stroke-width: 2.1; fill: none; marker-end: url(#arrowTeal); }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: #FFFFFF; box-shadow: 0 10px 36px rgba(16,24,32,.06); }
+    th, td { padding: 12px 15px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; font-size: 13.8px; line-height: 1.35; }
+    th { color: var(--navy); background: #EAF4FC; font-size: 11px; letter-spacing: .10em; text-transform: uppercase; }
+    tr:last-child td { border-bottom: 0; }
+    td:first-child { color: var(--navy); font-weight: 850; }
+    td:nth-child(2) { color: var(--ink); font-weight: 750; }
+    .note { margin-top: 12px; padding: 13px 16px; border: 1px solid rgba(0,176,141,.20); border-radius: 14px; background: var(--teal-soft); color: #005BAA; font-size: 13px; line-height: 1.42; }
+    .compare { display: grid; grid-template-columns: 1.18fr repeat(3, .94fr); gap: 14px; }
+    .pill { display: inline-flex; min-height: 27px; align-items: center; padding: 5px 10px; border-radius: 999px; background: #EAF4FC; color: var(--navy); font-size: 11px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+    .pill.teal { color: var(--teal); background: var(--teal-soft); }
+    .code { overflow: hidden; border: 1px solid #DDE6EF; border-radius: 18px; background: #005BAA; box-shadow: 0 10px 36px rgba(16,24,32,.10); }
+    .code-head { display: flex; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,.12); color: rgba(255,255,255,.68); font-size: 12px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+    pre { margin: 0; padding: 17px 18px 20px; color: #EAF4FC; white-space: pre-wrap; font: 12.5px/1.46 "Cascadia Code", Consolas, monospace; }
+    .timeline { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+    .phase { position: relative; min-height: 188px; padding: 18px 16px; }
+    .phase:before { content: attr(data-phase); display: grid; place-items: center; width: 34px; height: 34px; margin-bottom: 12px; border-radius: 999px; color: #FFFFFF; background: var(--navy); font-size: 12px; font-weight: 900; }
+    .duration { position: absolute; left: 16px; right: 16px; bottom: 14px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--teal); font-size: 12px; font-weight: 850; }
+    .resources { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+    .resource ul { display: grid; gap: 9px; margin: 12px 0 0; padding: 0; list-style: none; }
+    .resource li { position: relative; padding-left: 24px; color: var(--soft); font-size: 13px; line-height: 1.32; }
+    .resource li:before { content: ""; position: absolute; left: 0; top: 1px; width: 15px; height: 15px; border: 1.6px solid #636E72; border-radius: 4px; background: #FFFFFF; }
+    .closing { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 28px; align-items: stretch; }
+    .cta { padding: 30px; border-radius: 24px; color: #FFFFFF; background: linear-gradient(135deg, var(--navy), #005BAA); box-shadow: 0 24px 65px rgba(0,91,170,.22); }
+    .cta h3 { color: #FFFFFF; font-size: 28px; } .cta p { color: rgba(255,255,255,.78); font-size: 16px; line-height: 1.5; }
+    .counter, .controls { position: fixed; z-index: 60; }
+    .counter { right: 34px; bottom: 22px; padding: 9px 13px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.85); color: var(--muted); font-size: 12px; font-weight: 750; }
+    .controls { right: 34px; top: 22px; display: flex; gap: 8px; }
+    .ctrl { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 999px; color: var(--navy); background: rgba(255,255,255,.88); cursor: pointer; }
+    .ctrl:hover:not(:disabled) { background: var(--navy); color: #FFFFFF; }
+    .ctrl:disabled { opacity: .38; cursor: default; }
+    .nav button:focus-visible, .ctrl:focus-visible { outline: none; box-shadow: var(--focus); }
+    @media (max-width: 1180px) {
+      :root { --sidebar: 238px; }
+      .stage { padding: 24px; } .slide { inset: 24px; } .head { padding: 28px 30px 14px; } .body { padding: 14px 30px 30px; }
+      .frame.hero { padding: 44px; } .hero-grid, .grid-2-1, .closing { grid-template-columns: 1fr; }
+      .hero-panel { min-height: 220px; } .principles, .three { grid-template-columns: repeat(2, 1fr); }
+      .timeline { grid-template-columns: repeat(3, 1fr); } .resources, .compare { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 820px) {
+      html, body { overflow: auto; }
+      .shell { display: block; } .sidebar { position: sticky; top: 4px; z-index: 20; max-height: 40vh; border-right: 0; border-bottom: 1px solid var(--line); }
+      .stage { height: calc(100vh - 210px); min-height: 650px; } .frame { max-height: calc(100vh - 240px); }
+      .meta, .two, .three, .principles, .timeline, .resources, .compare { grid-template-columns: 1fr; }
+      .controls, .counter { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { transition-duration: 1ms !important; animation-duration: 1ms !important; } }
+  </style>
+</head>
+<body>
+  <div class="progress" aria-hidden="true"><div class="progress-bar" id="progressBar"></div></div>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Navegación de secciones">
+      <div class="brand"><small>Control de riesgo</small><h1>Agente Analítico</h1></div>
+      <nav class="nav" id="nav" aria-label="Índice de presentación"></nav>
+      <div class="side-note">Navegación: flechas izquierda/derecha, Home/End o índice lateral.</div>
+    </aside>
+    <main class="stage" role="main">
+      <div class="controls"><button class="ctrl" id="prev" type="button" aria-label="Sección anterior">‹</button><button class="ctrl" id="next" type="button" aria-label="Sección siguiente">›</button></div>
+      <div class="counter" id="counter" aria-live="polite">01 / 16</div>
+
+      <section class="slide active" data-title="Portada" aria-labelledby="s1">
+        <article class="frame hero">
+          <div class="hero-grid">
+            <div>
+              <div class="kicker">Propuesta de diseño e implementación</div>
+              <h1 class="title" id="s1">Agente Analítico de Control de Riesgo</h1>
+              <p class="tagline">Métricas de negocio confiables, vía lenguaje natural, con trazabilidad end-to-end.</p>
+              <div class="meta">
+                <div><p class="m-label">Autor</p><p class="m-value">[Nombre del autor]</p></div>
+                <div><p class="m-label">Área</p><p class="m-value">[Gerencia de Control de Riesgo]</p></div>
+                <div><p class="m-label">Fecha</p><p class="m-value">[Fecha]</p></div>
+              </div>
+            </div>
+            <div class="hero-panel" aria-hidden="true"><div class="hero-node n1">Lenguaje natural</div><div class="hero-node n2">Catálogos validados</div><div class="hero-node n3">Modelos semánticos</div></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="slide" data-title="Idea en una página" aria-labelledby="s2">
+        <article class="frame">
+          <header class="head"><div class="kicker">01 / Visión</div><h2 id="s2">La idea en una página</h2><p class="lead">Un backend que interpreta preguntas de negocio y ejecuta consultas confiables sobre modelos semánticos existentes.</p></header>
+          <div class="body"><div class="grid-2-1">
+            <div class="two">
+              <div class="card warn"><h3>Problema</h3><p>Obtener métricas específicas requiere analistas, consultas ad-hoc o dashboards rígidos.</p></div>
+              <div class="card accent"><h3>Propuesta</h3><p>Un backend agéntico en Python que entiende lenguaje natural y consulta modelos semánticos existentes en Fabric.</p></div>
+              <div class="card"><h3>Por qué ahora</h3><p>El ecosistema de agentes maduró en 2025-2026: Agent Framework 1.0, MCP e interoperabilidad entre agentes.</p></div>
+              <div class="card"><h3>Principio rector</h3><p>El LLM interpreta; los catálogos validan; Fabric ejecuta. El sistema no inventa métricas, filtros ni consultas.</p></div>
+            </div>
+            <div class="card"><h3>Consultas esperadas</h3><div class="queries"><div class="query">¿Cuántos clientes activos tenemos este mes?</div><div class="query">¿Cuál es el ratio de mora de la cartera X en los últimos 3 meses?</div><div class="query">Dame el saldo total del segmento Y al último período cerrado.</div></div></div>
+          </div></div>
+        </article>
+      </section>
+
+      <section class="slide" data-title="Principios" aria-labelledby="s3">
+        <article class="frame">
+          <header class="head"><div class="kicker">02 / Diseño</div><h2 id="s3">Principios innegociables del diseño</h2><p class="lead">No es un chatbot con acceso a datos. Es una capa analítica controlada, auditable y segura.</p></header>
+          <div class="body"><div class="principles">
+            <div class="principle"><span class="mark">01</span><h3>Confianza primero</h3><p>Nunca inventar. Si no hay grounding suficiente, pedir aclaración.</p></div>
+            <div class="principle"><span class="mark">02</span><h3>Catalog-driven</h3><p>Los catálogos son la fuente de verdad operativa para métricas y filtros.</p></div>
+            <div class="principle"><span class="mark">03</span><h3>Ejecución determinista</h3><p>Lenguaje natural flexible; planificación, validación y ejecución estrictas.</p></div>
+            <div class="principle"><span class="mark">04</span><h3>Separación de responsabilidades</h3><p>Interfaz, orquestación, dominio e infraestructura con límites claros.</p></div>
+            <div class="principle"><span class="mark">05</span><h3>Auditable y explicable</h3><p>Trazabilidad completa por request: intención, plan, consulta y respuesta.</p></div>
+            <div class="principle"><span class="mark">06</span><h3>Fallo seguro</h3><p>Clarificación o error estructurado antes que una respuesta improvisada.</p></div>
+          </div></div>
+        </article>
+      </section>
+
+      <section class="slide" data-title="Arquitectura alta" aria-labelledby="s4">
+        <article class="frame">
+          <header class="head"><div class="kicker">03 / Arquitectura</div><h2 id="s4">Arquitectura de solución: vista alta</h2><p class="lead">Consumidores múltiples, un backend analítico central y fuentes gobernadas en Fabric / Power BI.</p></header>
+          <div class="body"><div class="diagram">
+            <svg viewBox="0 0 1120 560" role="img" aria-label="Arquitectura de alto nivel">
+              <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#636E72"/></marker><marker id="arrowTeal" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#00B08D"/></marker></defs>
+              <rect class="box" x="48" y="36" width="236" height="82" rx="18"/><text class="svg-title" x="166" y="73" text-anchor="middle">Aplicaciones internas</text><text class="svg-sub" x="166" y="94" text-anchor="middle">REST / workflows</text>
+              <rect class="box" x="324" y="36" width="236" height="82" rx="18"/><text class="svg-title" x="442" y="73" text-anchor="middle">Otros agentes IA</text><text class="svg-sub" x="442" y="94" text-anchor="middle">A2A / integración futura</text>
+              <rect class="box" x="600" y="36" width="236" height="82" rx="18"/><text class="svg-title" x="718" y="73" text-anchor="middle">Clientes MCP</text><text class="svg-sub" x="718" y="94" text-anchor="middle">herramientas expuestas</text>
+              <rect class="box" x="876" y="36" width="196" height="82" rx="18"/><text class="svg-title" x="974" y="73" text-anchor="middle">Chat / workflow</text><text class="svg-sub" x="974" y="94" text-anchor="middle">interfaces futuras</text>
+              <rect class="box-dark" x="304" y="190" width="512" height="184" rx="24"/><text class="dark-text" x="560" y="226" text-anchor="middle" style="font-size:18px">Backend analítico</text>
+              <rect x="336" y="254" width="132" height="64" rx="14" fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.24)"/><text class="dark-text" x="402" y="282" text-anchor="middle">API REST</text><text x="402" y="302" text-anchor="middle" fill="rgba(255,255,255,.68)" font-size="11">FastAPI</text>
+              <rect x="494" y="254" width="132" height="64" rx="14" fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.24)"/><text class="dark-text" x="560" y="282" text-anchor="middle">Agentes</text><text x="560" y="302" text-anchor="middle" fill="rgba(255,255,255,.68)" font-size="11">workflow graph</text>
+              <rect x="652" y="254" width="132" height="64" rx="14" fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.24)"/><text class="dark-text" x="718" y="282" text-anchor="middle">Catálogos</text><text x="718" y="302" text-anchor="middle" fill="rgba(255,255,255,.68)" font-size="11">métricas/filtros</text>
+              <rect class="box-soft" x="58" y="220" width="196" height="112" rx="20"/><text class="svg-title" x="156" y="266" text-anchor="middle">Azure OpenAI</text><text class="svg-sub" x="156" y="288" text-anchor="middle">razonamiento controlado</text>
+              <rect class="box" x="866" y="220" width="196" height="112" rx="20"/><text class="svg-title" x="964" y="266" text-anchor="middle">Application Insights</text><text class="svg-sub" x="964" y="288" text-anchor="middle">logs, trazas, métricas</text>
+              <rect class="box" x="264" y="442" width="592" height="78" rx="20"/><text class="svg-title" x="560" y="476" text-anchor="middle">Microsoft Fabric / Power BI</text><text class="svg-sub" x="560" y="498" text-anchor="middle">modelos semánticos existentes + Execute Queries REST API</text>
+              <path class="arrow-t" d="M166 118 C166 154, 398 156, 402 190"/><path class="arrow-t" d="M442 118 C442 150, 520 156, 540 190"/><path class="arrow-t" d="M718 118 C718 150, 610 156, 590 190"/><path class="arrow-t" d="M974 118 C974 160, 728 154, 718 190"/><path class="arrow" d="M254 276 L304 276"/><path class="arrow" d="M816 276 L866 276"/><path class="arrow-t" d="M560 374 L560 442"/>
+            </svg>
+          </div></div>
+        </article>
+      </section>
+
+      <section class="slide" data-title="Stack tecnológico" aria-labelledby="s5">
+        <article class="frame">
+          <header class="head"><div class="kicker">04 / Stack</div><h2 id="s5">Stack tecnológico propuesto</h2><p class="lead">Decisiones orientadas a integración corporativa, validación estricta y operación observable.</p></header>
+          <div class="body">
+            <table><thead><tr><th>Componente</th><th>Herramienta elegida</th><th>Justificación breve</th></tr></thead><tbody>
+              <tr><td>Lenguaje</td><td>Python</td><td>Ecosistema maduro para backends IA, validación, APIs y clientes Azure.</td></tr>
+              <tr><td>Framework de agentes</td><td>Microsoft Agent Framework 1.0</td><td>Sucesor oficial de Semantic Kernel + AutoGen, con workflows y foco empresarial Microsoft.</td></tr>
+              <tr><td>API HTTP</td><td>FastAPI</td><td>Simple, performante, typed-friendly y adecuado para contratos REST internos.</td></tr>
+              <tr><td>Validación</td><td>Pydantic</td><td>Schemas estrictos para catálogos, planes de consulta, filtros y respuestas.</td></tr>
+              <tr><td>LLM</td><td>Azure OpenAI Service</td><td>Alineado al ecosistema Azure y a controles corporativos de despliegue.</td></tr>
+              <tr><td>Vector store</td><td>Azure AI Search</td><td>RAG administrado sobre embeddings derivados de catálogos versionados.</td></tr>
+              <tr><td>Observabilidad</td><td>Application Insights</td><td>Trazas, métricas y diagnóstico operativo integrados al stack Azure.</td></tr>
+              <tr><td>Autenticación a Fabric</td><td>Service Principal (Entra ID)</td><td>Identidad no interactiva para backend, sujeta a permisos y restricciones corporativas.</td></tr>
+              <tr><td>Ejecución DAX</td><td>Power BI Execute Queries REST API</td><td>Canal REST para ejecutar DAX contra modelos semánticos existentes.</td></tr>
+              <tr><td>Gestión de secretos</td><td>Azure Key Vault</td><td>Separación de configuración sensible, rotación y control centralizado.</td></tr>
+              <tr><td>Control de versiones</td><td>Git corporativo</td><td>Trazabilidad de código, catálogos y cambios de definiciones.</td></tr>
+            </tbody></table>
+            <div class="note">Todas las decisiones son abiertas al lineamiento corporativo del equipo de IA.</div>
+          </div>
+        </article>
+      </section>
+
+      <section class="slide" data-title="Framework de agentes" aria-labelledby="s6">
+        <article class="frame">
+          <header class="head"><div class="kicker">05 / Decisión tecnológica</div><h2 id="s6">Por qué Microsoft Agent Framework</h2><p class="lead">Para este caso, la integración empresarial pesa más que la flexibilidad experimental.</p></header>
+          <div class="body"><div class="compare">
+            <div class="card accent"><span class="pill teal">Recomendado</span><h3>Microsoft Agent Framework 1.0</h3><ul class="bullets"><li>Sucesor oficial de Semantic Kernel + AutoGen.</li><li>Integración natural con Azure OpenAI, Entra ID y Monitor.</li><li>MCP y A2A en el modelo de integración.</li><li>Workflow graphs para control explícito.</li></ul></div>
+            <div class="card"><span class="pill">Alternativa técnica</span><h3>LangGraph</h3><p>Excelente para grafos de agentes, pero fuera del ecosistema Microsoft y con otro modelo de soporte.</p></div>
+            <div class="card"><span class="pill">Legado directo</span><h3>Semantic Kernel / AutoGen standalone</h3><p>Referencias relevantes, pero absorbidas en el camino recomendado de Agent Framework para proyectos nuevos.</p></div>
+            <div class="card"><span class="pill">Liviano</span><h3>Pydantic AI</h3><p>Tipado y simple, pero con menor madurez empresarial para un contexto bancario Microsoft-first.</p></div>
+          </div><div class="note">La decisión final depende del lineamiento corporativo vigente sobre frameworks de agentes.</div></div>
+        </article>
+      </section>
+
+      <section class="slide" data-title="Componentes" aria-labelledby="s7">
+        <article class="frame">
+          <header class="head"><div class="kicker">06 / Componentes</div><h2 id="s7">Arquitectura de componentes: vista detallada</h2><p class="lead">El backend se organiza por capas para que el LLM no tenga control directo sobre datos ni consultas.</p></header>
+          <div class="body"><div class="diagram">
+            <svg viewBox="0 0 1120 610" role="img" aria-label="Capas internas del backend analítico">
+              <defs><marker id="a2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#636E72"/></marker></defs>
+              <rect x="50" y="34" width="1020" height="92" rx="22" fill="#EAF4FC" stroke="#DDE6EF"/><text class="svg-title" x="84" y="68">Capa de interfaz</text><rect class="box" x="360" y="55" width="160" height="50" rx="14"/><text class="svg-title" x="440" y="86" text-anchor="middle">FastAPI REST</text><rect class="box" x="600" y="55" width="160" height="50" rx="14"/><text class="svg-title" x="680" y="86" text-anchor="middle">Servidor MCP</text>
+              <rect x="50" y="154" width="1020" height="92" rx="22" fill="#E7F8F4" stroke="#00B08D"/><text class="svg-title" x="84" y="188">Capa de orquestación</text><rect class="box-soft" x="424" y="175" width="272" height="50" rx="14"/><text class="svg-title" x="560" y="206" text-anchor="middle">Workflow Graph (Agent Framework)</text>
+              <rect x="50" y="274" width="1020" height="112" rx="22" fill="#FFFFFF" stroke="#DDE6EF"/><text class="svg-title" x="84" y="310">Capa de agentes</text><rect class="box" x="260" y="304" width="180" height="54" rx="14"/><text class="svg-title" x="350" y="336" text-anchor="middle">Intérprete</text><rect class="box" x="470" y="304" width="180" height="54" rx="14"/><text class="svg-title" x="560" y="336" text-anchor="middle">Orquestador</text><rect class="box" x="680" y="304" width="180" height="54" rx="14"/><text class="svg-title" x="770" y="336" text-anchor="middle">Validación</text>
+              <rect x="50" y="414" width="1020" height="92" rx="22" fill="#F5F7FA" stroke="#DDE6EF"/><text class="svg-title" x="84" y="448">Capa de dominio</text><rect class="box" x="244" y="435" width="150" height="50" rx="14"/><text class="svg-title" x="319" y="466" text-anchor="middle">Métricas</text><rect class="box" x="414" y="435" width="150" height="50" rx="14"/><text class="svg-title" x="489" y="466" text-anchor="middle">Léxico</text><rect class="box" x="584" y="435" width="150" height="50" rx="14"/><text class="svg-title" x="659" y="466" text-anchor="middle">Filtros</text><rect class="box" x="754" y="435" width="150" height="50" rx="14"/><text class="svg-title" x="829" y="466" text-anchor="middle">Políticas</text>
+              <rect x="50" y="534" width="1020" height="54" rx="22" fill="#005BAA"/><text x="84" y="566" fill="#FFFFFF" font-size="15" font-weight="800">Infraestructura</text><text x="300" y="566" fill="rgba(255,255,255,.82)" font-size="13" font-weight="700">Adaptador Fabric</text><text x="478" y="566" fill="rgba(255,255,255,.82)" font-size="13" font-weight="700">Azure OpenAI</text><text x="640" y="566" fill="rgba(255,255,255,.82)" font-size="13" font-weight="700">Azure AI Search</text><text x="830" y="566" fill="rgba(255,255,255,.82)" font-size="13" font-weight="700">Logger / Tracer</text>
+              <path d="M560 126 L560 154" stroke="#636E72" stroke-width="1.8" marker-end="url(#a2)"/><path d="M560 246 L560 274" stroke="#636E72" stroke-width="1.8" marker-end="url(#a2)"/><path d="M560 386 L560 414" stroke="#636E72" stroke-width="1.8" marker-end="url(#a2)"/><path d="M560 506 L560 534" stroke="#636E72" stroke-width="1.8" marker-end="url(#a2)"/>
+            </svg>
+          </div></div>
+        </article>
+      </section>
+
+      <section class="slide" data-title="Loops de control" aria-labelledby="s8">
+        <article class="frame">
+          <header class="head"><div class="kicker">07 / Orquestación</div><h2 id="s8">Orquestación de agentes y loops de control</h2><p class="lead">Cada paso produce un artefacto validable. Si falla el grounding o la validación, el sistema no improvisa.</p></header>
+          <div class="body"><div class="diagram">
+            <svg viewBox="0 0 1160 520" role="img" aria-label="Flujo de consulta con siete loops de control">
+              <defs><marker id="a3" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#00B08D"/></marker></defs>
+              <path d="M88 246 C200 88,382 88,492 246 C610 414,798 414,920 246" fill="none" stroke="#DDE6EF" stroke-width="26" stroke-linecap="round"/>
+              <g><g transform="translate(40 196)"><rect class="box-soft" width="138" height="92" rx="18"/><text class="svg-title" x="69" y="30" text-anchor="middle">1. Interpretación</text><text class="svg-sub" x="69" y="55" text-anchor="middle">NL a intención</text></g><g transform="translate(190 106)"><rect class="box" width="138" height="92" rx="18"/><text class="svg-title" x="69" y="30" text-anchor="middle">2. Grounding</text><text class="svg-sub" x="69" y="55" text-anchor="middle">catálogos</text></g><g transform="translate(346 106)"><rect class="box" width="138" height="92" rx="18"/><text class="svg-title" x="69" y="30" text-anchor="middle">3. Planning</text><text class="svg-sub" x="69" y="55" text-anchor="middle">métrica/filtros</text></g><g transform="translate(502 196)"><rect class="box-soft" width="138" height="92" rx="18"/><text class="svg-title" x="69" y="30" text-anchor="middle">4. Validación</text><text class="svg-sub" x="69" y="55" text-anchor="middle">plan permitido</text></g><g transform="translate(658 296)"><rect class="box" width="138" height="92" rx="18"/><text class="svg-title" x="69" y="30" text-anchor="middle">5. Ejecución</text><text class="svg-sub" x="69" y="55" text-anchor="middle">DAX template</text></g><g transform="translate(814 296)"><rect class="box" width="138" height="92" rx="18"/><text class="svg-title" x="69" y="30" text-anchor="middle">6. Resultado</text><text class="svg-sub" x="69" y="55" text-anchor="middle">estructura</text></g><g transform="translate(970 196)"><rect class="box-soft" width="138" height="92" rx="18"/><text class="svg-title" x="69" y="30" text-anchor="middle">7. Respuesta</text><text class="svg-sub" x="69" y="55" text-anchor="middle">trazabilidad</text></g></g>
+              <path d="M178 242 L190 176" stroke="#00B08D" stroke-width="2" fill="none" marker-end="url(#a3)"/><path d="M328 152 L346 152" stroke="#00B08D" stroke-width="2" fill="none" marker-end="url(#a3)"/><path d="M484 176 L502 232" stroke="#00B08D" stroke-width="2" fill="none" marker-end="url(#a3)"/><path d="M640 266 L658 326" stroke="#00B08D" stroke-width="2" fill="none" marker-end="url(#a3)"/><path d="M796 342 L814 342" stroke="#00B08D" stroke-width="2" fill="none" marker-end="url(#a3)"/><path d="M952 326 L970 266" stroke="#00B08D" stroke-width="2" fill="none" marker-end="url(#a3)"/>
+              <rect x="322" y="430" width="516" height="46" rx="18" fill="#FFF0EC" stroke="#F37053"/><text x="580" y="459" text-anchor="middle" fill="#EF413D" font-size="14" font-weight="800">Fallo seguro: clarificación, rechazo controlado o error estructurado</text>
+            </svg>
+          </div></div>
+        </article>
+      </section>
+
+      <section class="slide" data-title="Catálogos" aria-labelledby="s9">
+        <article class="frame">
+          <header class="head"><div class="kicker">08 / Dominio</div><h2 id="s9">El corazón del sistema: los catálogos</h2><p class="lead">El LLM elige entre candidatos validados. Nunca crea una métrica nueva por su cuenta.</p></header>
+          <div class="body"><div class="grid-2-1">
+            <div class="two">
+              <div class="card accent"><span class="pill teal">Capa 1</span><h3>Fuente de verdad</h3><p>Catálogo YAML/JSON versionado en Git, con schema Pydantic estricto y ownership funcional.</p></div>
+              <div class="card"><span class="pill">Capa 2</span><h3>Asistente de búsqueda</h3><p>RAG con embeddings en Azure AI Search, generado automáticamente desde la capa estructurada.</p></div>
+              <div class="card"><h3>Linaje técnico</h3><p>El linaje desde ETLs complementa la trazabilidad; no reemplaza la definición de negocio.</p></div>
+              <div class="card warn"><h3>Riesgo principal</h3><p>El mantenimiento del catálogo es un problema de gobierno, no solamente técnico.</p></div>
+            </div>
+            <div class="code"><div class="code-head"><span>metric.yaml</span><span>schema validado</span></div><pre>metric_id: clientes_activos
+business_name: Clientes activos
+aliases:
+  - cantidad de clientes activos
+definition: Clientes con relación activa al cierre del período.
+semantic_model: Riesgo_Comercial
+dax_measure: "[Clientes Activos]"
+supported_filters:
+  - periodo
+  - segmento
+  - cartera
+required_filters:
+  - periodo
+owner: [Owner funcional]
+policy_tags:
+  - business_metric
+  - controlled_output</pre></div>
+          </div></div>
+        </article>
+      </section>
+
+      <section class="slide" data-title="Fabric" aria-labelledby="s10">
+        <article class="frame">
+          <header class="head"><div class="kicker">09 / Integración</div><h2 id="s10">Integración con Fabric / Power BI</h2><p class="lead">La ejecución se apoya en modelos semánticos existentes y evita DAX libre generado sin control.</p></header>
+          <div class="body"><div class="two">
+            <div class="card accent"><h3>Camino propuesto</h3><ul class="bullets"><li>Power BI Execute Queries REST API para ejecutar DAX.</li><li>Autenticación con Service Principal en Entra ID.</li><li>DAX generado desde templates parametrizados.</li><li>Resultado validado antes de construir la respuesta final.</li></ul></div>
+            <div class="card"><h3>Decisiones y límites</h3><ul class="bullets"><li>No usar Semantic Link / SemPy para backend externo: está soportado dentro de Fabric.</li><li>XMLA endpoint como posibilidad futura para casos complejos.</li><li>Validar restricciones de Service Principal, RLS, SSO y políticas tenant.</li></ul></div>
+          </div><div class="diagram" style="margin-top:18px"><svg viewBox="0 0 1040 190" role="img" aria-label="Flujo Fabric"><defs><marker id="a4" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#00B08D"/></marker></defs><rect class="box-soft" x="40" y="54" width="190" height="82" rx="18"/><text class="svg-title" x="135" y="88" text-anchor="middle">Plan validado</text><text class="svg-sub" x="135" y="110" text-anchor="middle">métrica + filtros</text><rect class="box" x="290" y="54" width="190" height="82" rx="18"/><text class="svg-title" x="385" y="88" text-anchor="middle">Template DAX</text><text class="svg-sub" x="385" y="110" text-anchor="middle">parametrizado</text><rect class="box" x="540" y="54" width="210" height="82" rx="18"/><text class="svg-title" x="645" y="88" text-anchor="middle">Execute Queries API</text><text class="svg-sub" x="645" y="110" text-anchor="middle">Power BI REST</text><rect class="box-dark" x="810" y="54" width="190" height="82" rx="18"/><text class="dark-text" x="905" y="88" text-anchor="middle">Modelo semántico</text><text x="905" y="110" text-anchor="middle" fill="rgba(255,255,255,.72)" font-size="11">Fabric / Power BI</text><path d="M230 95 L290 95" stroke="#00B08D" stroke-width="2" marker-end="url(#a4)"/><path d="M480 95 L540 95" stroke="#00B08D" stroke-width="2" marker-end="url(#a4)"/><path d="M750 95 L810 95" stroke="#00B08D" stroke-width="2" marker-end="url(#a4)"/></svg></div></div>
+        </article>
+      </section>
+
+      <section class="slide" data-title="MCP" aria-labelledby="s11">
+        <article class="frame">
+          <header class="head"><div class="kicker">10 / Interoperabilidad</div><h2 id="s11">MCP: qué es y cómo se integra</h2><p class="lead">MCP expone herramientas a clientes de IA. En este diseño es transporte, no dominio.</p></header>
+          <div class="body"><div class="two">
+            <div class="card accent"><h3>Aclaración conceptual</h3><ul class="bullets"><li>MCP es un protocolo estándar abierto para conectar clientes de IA con servidores que exponen herramientas.</li><li>El servidor MCP es una fachada delgada sobre el backend.</li><li>La lógica vive en el backend: catálogos, validación, orquestación y ejecución.</li><li>Se agrega después del MVP.</li></ul></div>
+            <div class="diagram"><svg viewBox="0 0 520 310" role="img" aria-label="Relación backend REST MCP"><defs><marker id="a5" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#00B08D"/></marker></defs><rect class="box-dark" x="150" y="112" width="220" height="86" rx="20"/><text class="dark-text" x="260" y="148" text-anchor="middle">Backend analítico</text><text x="260" y="170" text-anchor="middle" fill="rgba(255,255,255,.72)" font-size="11">lógica y validación</text><rect class="box" x="32" y="30" width="150" height="58" rx="15"/><text class="svg-title" x="107" y="65" text-anchor="middle">Apps internas</text><rect class="box" x="338" y="30" width="150" height="58" rx="15"/><text class="svg-title" x="413" y="65" text-anchor="middle">Clientes MCP</text><rect class="box-soft" x="62" y="228" width="164" height="58" rx="15"/><text class="svg-title" x="144" y="263" text-anchor="middle">API REST</text><rect class="box-soft" x="294" y="228" width="164" height="58" rx="15"/><text class="svg-title" x="376" y="263" text-anchor="middle">Servidor MCP</text><path d="M144 228 L205 198" stroke="#00B08D" stroke-width="2" marker-end="url(#a5)"/><path d="M376 228 L315 198" stroke="#00B08D" stroke-width="2" marker-end="url(#a5)"/><path d="M107 88 L144 228" stroke="#636E72" stroke-width="1.7" fill="none" marker-end="url(#a5)"/><path d="M413 88 L376 228" stroke="#636E72" stroke-width="1.7" fill="none" marker-end="url(#a5)"/></svg></div>
+          </div></div>
+        </article>
+      </section>
+
+      <section class="slide" data-title="Roadmap" aria-labelledby="s12">
+        <article class="frame">
+          <header class="head"><div class="kicker">11 / Plan</div><h2 id="s12">Roadmap por fases</h2><p class="lead">Primero gobernar el dominio. Después automatizar. Si arrancamos por el agente sin catálogo, construimos sobre arena.</p></header>
+          <div class="body"><div class="timeline">
+            <div class="phase" data-phase="0"><h3>Fundación</h3><p>Estructura, config, bootstrap.</p><div class="duration">[X semanas]</div></div>
+            <div class="phase" data-phase="1"><h3>Catálogos primero</h3><p>5-10 métricas reales y pipeline simple.</p><div class="duration">[X semanas]</div></div>
+            <div class="phase" data-phase="2"><h3>Orquestación</h3><p>Workflow con Agent Framework.</p><div class="duration">[X semanas]</div></div>
+            <div class="phase" data-phase="3"><h3>Ejecución Fabric</h3><p>Power BI REST API y templates DAX.</p><div class="duration">[X semanas]</div></div>
+            <div class="phase" data-phase="4"><h3>Hardening</h3><p>Tests, observabilidad, seguridad.</p><div class="duration">[X semanas]</div></div>
+            <div class="phase" data-phase="5"><h3>Exposición MCP</h3><p>Fachada MCP sobre contratos estables.</p><div class="duration">[X semanas]</div></div>
+          </div></div>
+        </article>
+      </section>
+
+      <section class="slide" data-title="Recursos" aria-labelledby="s13">
+        <article class="frame">
+          <header class="head"><div class="kicker">12 / Solicitudes</div><h2 id="s13">Recursos a solicitar al equipo técnico / IT</h2><p class="lead">La validación no es solo de herramientas. También hay que confirmar permisos, gobierno, seguridad y operación.</p></header>
+          <div class="body"><div class="resources">
+            <div class="resource"><h3>Accesos</h3><ul><li>Service Principal</li><li>Permisos Fabric / Power BI REST API</li><li>Licencias</li></ul></div>
+            <div class="resource"><h3>Infraestructura</h3><ul><li>Entorno Azure</li><li>Azure OpenAI deployment</li><li>Azure AI Search</li><li>Key Vault</li><li>Repo Git</li></ul></div>
+            <div class="resource"><h3>Observabilidad</h3><ul><li>Application Insights</li><li>Retención de logs</li><li>Correlación por request</li></ul></div>
+            <div class="resource"><h3>Gobierno</h3><ul><li>Stewards de datos</li><li>Documentación existente</li><li>Políticas</li></ul></div>
+            <div class="resource"><h3>Seguridad</h3><ul><li>Autenticación</li><li>Políticas hacia LLMs</li><li>Datos permitidos</li></ul></div>
+          </div></div>
+        </article>
+      </section>
+
+      <section class="slide" data-title="Riesgos" aria-labelledby="s14">
+        <article class="frame">
+          <header class="head"><div class="kicker">13 / Riesgos</div><h2 id="s14">Riesgos identificados y mitigaciones</h2><p class="lead">La arquitectura no elimina riesgos. Los hace visibles, discutibles y gobernables.</p></header>
+          <div class="body"><table><thead><tr><th>Riesgo</th><th>Tipo</th><th>Mitigación</th></tr></thead><tbody>
+            <tr><td>Agent Framework es muy nuevo</td><td>Técnico / adopción</td><td>Esperar rough edges; compensar con documentación oficial, soporte Microsoft y alcance incremental.</td></tr>
+            <tr><td>Mantenimiento del catálogo</td><td>Gobierno</td><td>Definir dueño único y proceso de actualización desde el día cero.</td></tr>
+            <tr><td>Expectativas desalineadas</td><td>Producto</td><td>Comunicar que el sistema responde sobre catálogo disponible y pide clarificación si no puede hacer grounding.</td></tr>
+            <tr><td>Dependencia de Azure OpenAI</td><td>Operación</td><td>Monitorear disponibilidad y considerar degraded mode.</td></tr>
+          </tbody></table></div>
+        </article>
+      </section>
+
+      <section class="slide" data-title="Preguntas abiertas" aria-labelledby="s15">
+        <article class="frame">
+          <header class="head"><div class="kicker">14 / Validación</div><h2 id="s15">Preguntas abiertas al equipo de IA</h2><p class="lead">Estas son las decisiones que conviene cerrar antes de invertir esfuerzo de desarrollo.</p></header>
+          <div class="body"><div class="two">
+            <div class="card"><h3>Framework y despliegue</h3><ul class="bullets"><li>¿Hay lineamiento corporativo sobre framework de agentes?</li><li>¿Preferencia de despliegue: App Service, Container Apps o AKS?</li><li>¿Qué modelos de Azure OpenAI están aprobados corporativamente?</li></ul></div>
+            <div class="card"><h3>Datos y seguridad</h3><ul class="bullets"><li>¿Azure AI Search confirmado o alternativa corporativa?</li><li>¿OAuth Entra ID vs API keys?</li><li>¿Existe catálogo corporativo de métricas, Purview u otro?</li><li>¿Lineamiento sobre datos enviables a LLMs?</li></ul></div>
+          </div></div>
+        </article>
+      </section>
+
+      <section class="slide" data-title="Cierre" aria-labelledby="s16">
+        <article class="frame hero">
+          <div class="closing">
+            <div><div class="kicker">15 / Cierre</div><h2 id="s16" class="title" style="font-size:clamp(42px,4.6vw,66px)">Validar antes de construir</h2><p class="lead">Busco validar enfoque, herramientas y recursos necesarios antes de iniciar desarrollo.</p>
+              <div class="three" style="margin-top:28px"><div class="card"><h3>Confiabilidad</h3><p>Métricas grounded en catálogos y modelos semánticos existentes.</p></div><div class="card"><h3>Interoperabilidad</h3><p>REST como MVP y MCP como exposición futura.</p></div><div class="card"><h3>Trazabilidad</h3><p>Cada request deja intención, plan, ejecución y respuesta auditables.</p></div></div>
+            </div>
+            <div class="cta"><h3>Call to action</h3><p>Validar enfoque, herramientas y recursos necesarios antes de iniciar desarrollo.</p><div style="height:1px;background:rgba(255,255,255,.18);margin:24px 0"></div><p><strong>Contacto</strong><br>[Nombre del autor]<br>[Email / Teams]</p></div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      const slides = Array.from(document.querySelectorAll('.slide'));
+      const nav = document.getElementById('nav');
+      const bar = document.getElementById('progressBar');
+      const counter = document.getElementById('counter');
+      const prev = document.getElementById('prev');
+      const next = document.getElementById('next');
+      let current = 0;
+      const pad = n => String(n).padStart(2, '0');
+
+      slides.forEach((slide, index) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.innerHTML = `<span class="num">${pad(index + 1)}</span><span class="label">${slide.dataset.title}</span>`;
+        btn.setAttribute('aria-label', `Ir a sección ${index + 1}: ${slide.dataset.title}`);
+        btn.addEventListener('click', () => goTo(index));
+        nav.appendChild(btn);
+      });
+      const navItems = Array.from(nav.querySelectorAll('button'));
+
+      function update() {
+        slides.forEach((s, i) => {
+          const active = i === current;
+          s.classList.toggle('active', active);
+          s.setAttribute('aria-hidden', String(!active));
+        });
+        navItems.forEach((b, i) => {
+          b.classList.toggle('active', i === current);
+          b.setAttribute('aria-current', i === current ? 'step' : 'false');
+        });
+        bar.style.width = `${((current + 1) / slides.length) * 100}%`;
+        counter.textContent = `${pad(current + 1)} / ${pad(slides.length)}`;
+        prev.disabled = current === 0;
+        next.disabled = current === slides.length - 1;
+        navItems[current]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        const hash = `#s${current + 1}`;
+        if (location.hash !== hash) history.replaceState(null, '', hash);
+      }
+
+      function goTo(index) { current = Math.max(0, Math.min(index, slides.length - 1)); update(); }
+      function go(delta) { goTo(current + delta); }
+      prev.addEventListener('click', () => go(-1));
+      next.addEventListener('click', () => go(1));
+      document.addEventListener('keydown', e => {
+        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+        if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); go(1); }
+        if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); go(-1); }
+        if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+        if (e.key === 'End') { e.preventDefault(); goTo(slides.length - 1); }
+      });
+      const match = location.hash.match(/^#s(\d+)$/);
+      if (match) current = Math.max(0, Math.min(Number(match[1]) - 1, slides.length - 1));
+      update();
+    })();
+  </script>
+</body>
+</html>
+
+
+

@@ -1,0 +1,20 @@
+﻿{
+  "name": "presentacion-dm-marketplace",
+  "interface": {
+    "displayName": "Presentación DM Plugins"
+  },
+  "plugins": [
+    {
+      "name": "hyperframes",
+      "source": {
+        "source": "local",
+        "path": "./plugins/hyperframes"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Design"
+    }
+  ]
+}
